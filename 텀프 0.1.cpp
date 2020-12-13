@@ -37,12 +37,7 @@ GLvoid Reshape(int, int);
 void drawScene();
 void TimerFunction(int);
 void Keyboard(unsigned char, int, int);
-void make_robot_start_pos();
-void Collision(float, float);
-void Move(int, float, float);
 void CalculateLight();
-void robot_random_move();
-void DrawRobot();
 
 GLUquadricObj* qobj;
 
@@ -115,13 +110,6 @@ float random_xpos = random_pos_urd(dre);
 float random_zpos = random_pos_urd(dre);
 float random_move_xpos = random_pos_urd(dre);
 float random_move_zpos = random_pos_urd(dre);
-
-typedef enum Direction {
-    RIGHT_UP,
-    RIGHT_DOWN,
-    LEFT_UP,
-    LEFT_DOWN
-} Direction;
 
 float robot_xpos[4] = { 0, };
 float robot_ypos[4] = { 0.0f };
@@ -252,8 +240,6 @@ bool loadOBJ(
 
 }
 
-bool res_robot = loadOBJ("robot.obj", robot_vertices, robot_uvs, robot_normals);
-bool res_bottom = loadOBJ("bottom.obj", bottom_vertices, bottom_uvs, bottom_normals);
 bool res_cube = loadOBJ("cube3.obj", cube_vertices, cube_uvs, cube_normals);
 
 
@@ -303,11 +289,107 @@ void drawScene()
     glUseProgram(s_program[1]);
     glUseProgram(s_program[2]);
 
+    glm::vec3 Red = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 Green = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 Blue = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec3 Gray = glm::vec3(0.7f, 0.7f, 0.7f);
+    glm::vec3 White = glm::vec3(1.0f, 1.0f, 1.0f);
+    glm::vec3 Black = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 Yellow = glm::vec3(1.0f, 1.0f, 0.0f);
+    glm::vec3 Brown = glm::vec3(0.6f, 0.3f, 0.0f);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    qobj = gluNewQuadric();
+
+    glm::mat4 S = glm::mat4(1.0f);
+    glm::mat4 T = glm::mat4(1.0f);
+    glm::mat4 Tx = glm::mat4(1.0f);
+    glm::mat4 Rx = glm::mat4(1.0f);
+    glm::mat4 Ry = glm::mat4(1.0f);
+    glm::mat4 RxY = glm::mat4(1.0f);
+    glm::mat4 STR = glm::mat4(1.0f);
+    glm::mat4 Robot_STR = glm::mat4(1.0f);
+    glm::mat4 Player_STR = glm::mat4(1.0f);
+    glm::mat4 view = glm::mat4(1.0f);
+
+    if (!threed_mode) {
+        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
+        glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
+    }
+    else {
+        view = glm::lookAt(cameraPos3, cameraDirection, cameraUp);
+        GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
+        glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
+    }
+
+    glm::mat4 projection = glm::mat4(1.0f);
+    projection = glm::perspective(glm::radians(Proj_degree), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+    GLuint Projectionlocation = glGetUniformLocation(s_program[0], "Projection");
+    glUniformMatrix4fv(Projectionlocation, 1, GL_FALSE, value_ptr(projection));
+
+    S = glm::scale(glm::mat4(1.0f), glm::vec3(20.0, 0.1, 20.0));
+    Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(rt_y)), glm::vec3(0.0, 1.0, 0.0));
+    STR = Ry * S;
+
+    T = glm::translate(glm::mat4(1.0f), glm::vec3((float)player_xpos, (float)player_ypos, (float)player_zpos));
+    Player_STR = Ry * T;
+    unsigned int Player = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(Player, 1, GL_FALSE, glm::value_ptr(Player_STR));
+    unsigned int Color_Player = glGetUniformLocation(s_program[1], "in_Color");
+    glUniform3f(Color_Player, Blue.r, Blue.g, Blue.b);
+
+    glBindVertexArray(VAO[0]);
+    glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
+
+    CalculateLight();
+
     glutPostRedisplay();
     glutSwapBuffers();
 }
 
+int cameracount = 0;
+
+bool y_rotate = false;
+int y_roll = 0;
+
+float cameraSpeed = 1.0f;
+
 void Keyboard(unsigned char key, int x, int y) {
+    switch (key) {
+    case'w':
+        if (!threed_mode) {
+            cameraPos += cameraSpeed * cameraFront;
+        }
+        player_zpos -= 1.0f;
+        break;
+    case 'a':
+        if (!threed_mode) {
+            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        }
+        player_xpos -= 1.0f;
+        break;
+    case 's':
+        if (!threed_mode) {
+            cameraPos -= cameraFront * cameraSpeed;
+        }
+        player_zpos += 1.0f;
+        break;
+    case 'd':
+        if (!threed_mode) {
+            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        }
+        player_xpos += 1.0f;
+        break;
+    case 'c':
+    case 'C':
+        if (threed_mode == false)
+            threed_mode = true;
+        else
+            threed_mode = false;
+        break;
+    }
     glutPostRedisplay();
 }
 
@@ -394,60 +476,18 @@ void InitBuffer()
     glGenVertexArrays(10, VAO);
     glGenBuffers(10, VBO);
 
-    // ·Îº¿
-    glBindVertexArray(VAO[0]);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
-    glBufferData(GL_ARRAY_BUFFER, robot_vertices.size() * sizeof(glm::vec3), &robot_vertices[0], GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-    glBufferData(GL_ARRAY_BUFFER, robot_normals.size() * sizeof(glm::vec3), &robot_normals[0], GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(1);
-
-    // ¹Ù´Ú   
-    glBindVertexArray(VAO[1]);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
-    glBufferData(GL_ARRAY_BUFFER, bottom_vertices.size() * sizeof(glm::vec3), &bottom_vertices[0], GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-    glBufferData(GL_ARRAY_BUFFER, bottom_normals.size() * sizeof(glm::vec3), &bottom_normals[0], GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(1);
-
-
     // Å¥ºê
 
-    glBindVertexArray(VAO[2]);
+    glBindVertexArray(VAO[0]);
     glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
     glBufferData(GL_ARRAY_BUFFER, cube_vertices.size() * sizeof(glm::vec3), &cube_vertices[0], GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
-    
+
     glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
     glBufferData(GL_ARRAY_BUFFER, cube_normals.size() * sizeof(glm::vec3), &cube_normals[0], GL_STATIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
-
-    glBindVertexArray(VAO[3]);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
-
-    // ¹è°æ
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Background), Background, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
 }
 
 void InitShader() {
