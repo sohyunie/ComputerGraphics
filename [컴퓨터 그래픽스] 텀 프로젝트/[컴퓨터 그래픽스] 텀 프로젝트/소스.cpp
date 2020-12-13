@@ -11,7 +11,6 @@
 #include <time.h>
 #include <windows.h>
 #include <vector>
-
 #include <gl/glew.h> 
 #include <gl/freeglut.h>
 #include <gl/freeglut_ext.h>
@@ -22,6 +21,15 @@
 
 #define WIDTH 800
 #define HEIGHT 600
+
+#define MAP_1 "../MAP_Veryeasy.txt"
+#define MAP_2 "../MAP_Easy.txt"
+#define MAP_3 "../MAP_Normal.txt"
+#define MAP_4 "../MAP_Hard.txt"
+#define MAP_5 "../MAP_Veryhard.txt"
+#define INIT "../MAP_Veryeasy.txt"
+
+#define SIZE 22 // 맵 사이즈
 using namespace std;
 
 // 기본 함수 선언
@@ -53,6 +61,18 @@ GLuint vertexshader, lineVertexShader, fragmentshader;
 
 GLuint VAO[10], VBO[10];
 GLuint VAOCube[7], VBOCube[7];
+
+///////////////////////////////////////////////////////////////
+// 맵 파일 입출력
+GLubyte* LoadDIBitmap(const char* filename, BITMAPINFO** info);
+GLubyte* pBytes; // 데이터를 가리킬 포인터
+BITMAPINFO* info; // 비트맵 헤더 저장할 변수
+GLuint textures[1];
+void initTextures();
+
+int mapcollect = 0;
+int makeboard[SIZE][SIZE] = { 0 };
+float colorbuffer[4][3] = { 0 };
 
 unsigned int texture;
 
@@ -528,6 +548,377 @@ void throw_bomb() {
     gluSphere(qobj, 0.5, 20, 20);
 }
 
+
+////////////////////////////////////////////////////////////////////////
+// 맵을 읽어옵시다
+int Loadfile()
+{
+    FILE* fp;
+    switch (mapcollect)
+    {
+    case 0:
+        fp = fopen(MAP_1, "rt");
+        break;
+    case 1:
+        fp = fopen(MAP_2, "rt");
+        break;
+    case 2:
+        fp = fopen(MAP_3, "rt");
+        break;
+    case 3:
+        fp = fopen(MAP_4, "rt");
+        break;
+    case 4:
+        fp = fopen(MAP_5, "rt");
+        break;
+    case 5:
+        fp = fopen(INIT, "rt");
+        break;
+    }
+
+
+    if (fp == NULL)
+    {
+        printf("\n실패\n");
+        return 1;
+    }
+
+    printf("\n완료\n");
+
+    int cha;
+
+    while (feof(fp) == 0)
+    {
+        for (int i = 0; i < SIZE; i++)
+        {
+            for (int j = 0; j < SIZE; j++)
+            {
+                fscanf(fp, "%d", &cha);
+                makeboard[i][j] = cha;
+            }
+        }
+    }
+    fclose(fp);
+
+    return 1;
+}
+
+// 이젠 맵을 그릴거예요
+
+float obj_rot = 0;
+void draw_block()
+{
+    glPushMatrix();
+    {
+        glColor3f(colorbuffer[0][0], colorbuffer[0][1], colorbuffer[0][2]);
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+
+        glColor3f(colorbuffer[1][0], colorbuffer[1][1], colorbuffer[1][2]);
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+
+        glColor3f(colorbuffer[2][0], colorbuffer[2][1], colorbuffer[2][2]);
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+
+        glColor3f(colorbuffer[3][0], colorbuffer[3][1], colorbuffer[3][2]);
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+    }
+    glPopMatrix();
+}
+
+void item()
+{
+    glPushMatrix();
+    {
+        glEnable(GL_BLEND);
+        glPushMatrix();
+        {
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            //glColor3f(0.7, 0.2, 0.2);
+            glTranslatef(0, 2, 0);
+            glColor4f(0, 0.8, 0, 0.8);
+            glRotatef(obj_rot, 0, 1, 0);
+            glutSolidCube(0.3);
+        }
+        glPopMatrix();
+
+        glPushMatrix();
+        {
+            glColor4f(0.7, 0, 0, 0.5);
+            glTranslatef(0, 2, 0);
+            glRotatef(obj_rot, 0, 1, 0);
+            glRotatef(90, -1, 0, -1);
+            glutSolidCube(0.6);
+        }
+        glPopMatrix();
+
+        glDisable(GL_BLEND);
+    }
+    glPopMatrix();
+}
+
+void Line_block()
+{
+	glColor3f(0.7, 0.7, 0.7);
+
+	glPushMatrix();
+	{
+		glNormal3f(0, 1, 0);
+		glTranslatef(0, 1.1, 0);
+		glutSolidCube(1);
+
+		glTranslatef(0, 1.1, 0);
+		glutSolidCube(1);
+
+		glTranslatef(0, 1.1, 0);
+		glutSolidCube(1);
+
+		glTranslatef(0, 1.1, 0);
+		glutSolidCube(1);
+
+		glTranslatef(0, 1.1, 0);
+		glutSolidCube(1);
+	}
+	glPopMatrix();
+}
+
+void remain()
+{
+    glPushMatrix();
+    {
+        glEnable(GL_BLEND);
+        glPushMatrix();
+        {
+            //glScaled(1.5,1,1.5);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            //glColor3f(0.7, 0.2, 0.2);
+            glTranslatef(0, 0.6, 0);
+            glColor4f(0, 0.5, 0.5, 0.8);
+            glRotatef(obj_rot, 0, 1, 0);
+            glutSolidSphere(0.1, 15, 15);
+            //glutSolidCube(0.1);
+        }
+        glPopMatrix();
+
+        glPushMatrix();
+        {
+            //glScaled(1.5, 1, 1.5);
+            glColor4f(0.0, 0.0, 0.8, 0.5);
+            glTranslatef(0, 0.6, 0);
+            glRotatef(obj_rot + 5, 0, 1, 0);
+            glRotatef(90, -1, 0, -1);
+            //glutSolidSphere(0.15, 15, 15);
+            glutSolidCube(0.25);
+        }
+        glPopMatrix();
+
+        glDisable(GL_BLEND);
+    }
+    glPopMatrix();
+}
+
+void board_maker()
+{
+    for (int i = 0; i < SIZE; i++)
+    {
+        for (int j = 0; j < SIZE; j++)
+        {
+            if (makeboard[i][j] == 1)
+            {
+                glPushMatrix();
+                {
+                    glTranslatef(i * 1.1 - 15, 0, j * 1.1 - 15);
+                    draw_block();
+                }
+                glPopMatrix(); // 블럭 표시
+
+                glColor3f(1, 0, 0);
+                glLineWidth(1);
+                //glBegin(GL_LINE_LOOP);
+                //{
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].min_z);
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].min_z);
+                //}
+                //glEnd();
+                glLineWidth(1); // 블럭 위치
+            }
+            else if (makeboard[i][j] == 2)
+            {
+                glPushMatrix();
+                {
+                    glTranslatef(i * 1.1 - 15, 0, j * 1.1 - 15);
+                    item();
+                }
+                glPopMatrix(); // 아이템 표시
+
+                glColor3f(0, 1, 0);
+                glLineWidth(1);
+                //glBegin(GL_LINE_LOOP);
+                //{
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].min_z);
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].min_z);
+                //}
+                //glEnd();
+                glLineWidth(1); // 아이템 위치
+            }
+            else if (makeboard[i][j] == 3)
+            {
+                glPushMatrix();
+                {
+                    glTranslatef(i * 1.1 - 15, 1.5, j * 1.1 - 15);
+                    glColor3f(0.0, 0.0, 0.0);
+
+                    glBindTexture(GL_TEXTURE_2D, textures[1]);
+                    glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+                    glBegin(GL_QUADS);
+                    {
+                        glTexCoord2f(1, 1);
+                        glVertex3f(-1.0f, 2.0f, 1.0f);
+                        glTexCoord2f(0, 1);
+                        glVertex3f(-1.0f, -2.0f, 1.0f);
+                        glTexCoord2f(0, 0);
+                        glVertex3f(1.0f, -2.0f, 1.0f);
+                        glTexCoord2f(1, 0);
+                        glVertex3f(1.0f, 2.0f, 1.0f);
+                    }
+                    glEnd();
+                    //오른쪽
+                    glBindTexture(GL_TEXTURE_2D, textures[1]);
+                    glBegin(GL_QUADS);
+                    {
+                        glTexCoord2f(1, 1);
+                        glVertex3f(1.0f, 2.0f, 1.0f);
+                        glTexCoord2f(0, 1);
+                        glVertex3f(1.0f, -2.0f, 1.0f);
+                        glTexCoord2f(0, 0);
+                        glVertex3f(1.0f, -2.0f, -1.0f);
+                        glTexCoord2f(1, 0);
+                        glVertex3f(1.0f, 2.0f, -1.0f);
+                    }
+                    glEnd();
+                    //뒷쪽
+                    glBindTexture(GL_TEXTURE_2D, textures[1]);
+                    glBegin(GL_QUADS);
+                    {
+                        glTexCoord2f(1, 1);
+                        glVertex3f(1.0f, 2.0f, -1.0f);
+                        glTexCoord2f(0, 1);
+                        glVertex3f(1.0f, -2.0f, -1.0f);
+                        glTexCoord2f(0, 0);
+                        glVertex3f(-1.0f, -2.0f, -1.0f);
+                        glTexCoord2f(1, 0);
+                        glVertex3f(-1.0f, 2.0f, -1.0f);
+                    }
+                    glEnd();
+                    ////왼쪽
+                    glBindTexture(GL_TEXTURE_2D, textures[1]);
+                    glBegin(GL_QUADS);
+                    {
+                        glTexCoord2f(1, 1);
+                        glVertex3f(-1.0f, 2.0f, -1.0f);
+                        glTexCoord2f(0, 1);
+                        glVertex3f(-1.0f, -2.0f, -1.0f);
+                        glTexCoord2f(0, 0);
+                        glVertex3f(-1.0f, -2.0f, 1.0f);
+                        glTexCoord2f(1, 0);
+                        glVertex3f(-1.0f, 2.0f, 1.0f);
+                    }
+                    glEnd();
+                    ////아랫쪽
+                    glBindTexture(GL_TEXTURE_2D, textures[1]);
+                    glBegin(GL_QUADS);
+                    {
+                        glTexCoord2f(1, 1);
+                        glVertex3f(-1.0f, -2.0f, 1.0f);
+                        glTexCoord2f(0, 1);
+                        glVertex3f(-1.0f, -2.0f, -1.0f);
+                        glTexCoord2f(0, 0);
+                        glVertex3f(1.0f, -2.0f, -1.0f);
+                        glTexCoord2f(1, 0);
+                        glVertex3f(1.0f, -2.0f, 1.0f);
+                    }
+                    glEnd();
+                    ////윗쪽
+                    glBindTexture(GL_TEXTURE_2D, textures[1]);
+                    glBegin(GL_QUADS);
+                    {
+                        glTexCoord2f(1, 1);
+                        glVertex3f(-1.0f, 2.0f, 1.0f);
+                        glTexCoord2f(0, 1);
+                        glVertex3f(-1.0f, 2.0f, -1.0f);
+                        glTexCoord2f(0, 0);
+                        glVertex3f(1.0f, 2.0f, -1.0f);
+                        glTexCoord2f(1, 0);
+                        glVertex3f(1.0f, 2.0f, 1.0f);
+                    }
+                    glEnd();
+                }
+                glPopMatrix(); // 도착지 표시
+
+                glColor3f(0, 0, 1);
+                glLineWidth(1);
+                //glBegin(GL_LINE_LOOP);
+                //{
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].min_z);
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].min_z);
+                //}
+                //glEnd();
+                glLineWidth(1); // 도착지 위치
+            }
+            else if (makeboard[i][j] == 4)
+            {
+                glPushMatrix();
+                {
+                    glTranslatef(i * 1.1 - 15, 0, j * 1.1 - 15);
+                    remain();
+                }
+                glPopMatrix();
+
+                glColor3f(0, 1, 0);
+                //glLineWidth(1);
+                //glBegin(GL_LINE_LOOP);
+                //{
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].min_z);
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].min_z);
+                //}
+                //glEnd();
+                //glLineWidth(1); // 아이템 위치
+            }
+            if (makeboard[i][j] == 5)
+            {
+                glPushMatrix();
+                {
+                    glTranslatef(i * 1.1 - 15, 0, j * 1.1 - 15);
+                    Line_block();
+                }
+                glPopMatrix(); // 블럭 표시
+
+                glColor3f(1, 0, 0);
+                glLineWidth(1);
+                //glBegin(GL_LINE_LOOP);
+                //{
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].min_z);
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].min_z);
+                //}
+                //glEnd();
+                glLineWidth(1); // 블럭 위치
+            }
+        }
+    }
+}
 //void DrawHPTimer(int winPosX, int WinPosY, char* strMsg, void* font, double color[3]) {
 //    DrawText(10, 10, "test", GLUT_BITMAP_8_BY_13, m_fFontColor);
 //
