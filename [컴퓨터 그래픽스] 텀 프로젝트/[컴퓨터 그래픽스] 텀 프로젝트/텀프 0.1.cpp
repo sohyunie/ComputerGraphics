@@ -10,6 +10,7 @@
 #include <random>
 #include <time.h>
 #include <windows.h>
+#include <string.h>
 #include <vector>
 
 #include <gl/glew.h> 
@@ -42,6 +43,7 @@ void CalculateLight();
 
 // 함수 선언
 void throw_bomb();
+void renderBitmapCharacter(string);
 
 GLUquadricObj* qobj;
 
@@ -269,7 +271,7 @@ glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraPos3 = glm::vec3(0.0f, 20.0f, 30.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-glm::vec3 cameraPosM = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraPosM = glm::vec3(0.0f, 1.0f, 3.0f);
 float radius = 5.0f;
 float cameraX = sin(glutGet(GLUT_ELAPSED_TIME)) * radius;
 float cameraZ = cos(glutGet(GLUT_ELAPSED_TIME)) * radius;
@@ -374,11 +376,15 @@ void drawScene()
     glBindVertexArray(VAO[1]);
     glDrawArrays(GL_TRIANGLES, 0, robot_vertices.size());
 
-    if (bomb_mode) {
-        throw_bomb();
-        // throw_bomb = false;
-        // 적 구현 이후에 timer함수에서 움직이는거 구현
-    }
+    //if (bomb_mode) {
+    //    throw_bomb();
+    //    // throw_bomb = false;
+    //    // 적 구현 이후에 timer함수에서 움직이는거 구현
+    //}
+    throw_bomb();
+
+    string msg = "WHY GGAM BBACK";
+    renderBitmapCharacter(msg);
 
     CalculateLight();
 
@@ -434,59 +440,55 @@ void Keyboard(unsigned char key, int x, int y) {
     glutPostRedisplay();
 }
 
-//void Mouse(int button, int state, int x, int y) {
-//    if (button == GLUT_LEFT_BUTTON) {
-//        if (state == GLUT_DOWN) {
-//            dragging = 1;
-//            drag_x_origin = x;
-//            drag_y_origin = y;
-//        }
-//        else
-//            dragging = 0;
-//    }
-//}
-//
-//void mouse_move(int x, int y) {
-//    if (dragging) {
-//        camera_angle_v += (y - drag_y_origin) * 0.3;
-//        camera_angle_h += (x - drag_x_origin) * 0.3;
-//        drag_x_origin = x;
-//        drag_y_origin = y;
-//    }
-//}
-
 void Mouse(int button, int state, int x, int y) {
-    if (firstMouse)
-    {
+    float xoffset = 0.0f;
+    float yoffset = 0.0f;
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+
+        printf("X, Y : (%d, %d)\n", x, y);
+        if (firstMouse) {
+            lastX = x;
+            lastY = y;
+            firstMouse = false;
+        }
+
+        xoffset = x - lastX;
+        yoffset = lastY - y;
         lastX = x;
         lastY = y;
-        firstMouse = false;
+
+        printf("lastX, lastY : (%f, %f)\n", lastX, lastY);
+
+        float sensitivity = 1;
+        xoffset *= sensitivity;
+        yoffset *= sensitivity;
+
+        yaw += xoffset;
+        pitch += yoffset;
+
+        if (pitch > 89.0f)
+            pitch = 89.0f;
+        if (pitch < -89.0f)
+            pitch = -89.0f;
+
+        glm::vec3 front;
+        front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        front.y = sin(glm::radians(pitch));
+        front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+        cameraFront = glm::normalize(front);
     }
+    if ((button == 3) || (button == 4)) {
+        if (state == GLUT_UP)
+            return;
+        printf("Scroll %s At %d, %d\n", (button == 3) ? "Up" : "Down", x, y);
 
-    float xoffset = x - lastX;
-    float yoffset = lastY - y;
-    lastX = x;
-    lastY = y;
-
-    printf("lastX, lastY : (%f, %f)\n", lastX, lastY);
-
-    float sensitivity = 0.05;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-
-    if (pitch > 89.0f)
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
-
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(front);
+        if (fov >= 1.0f && fov <= 45.0f)
+            fov -= yoffset;
+        if (fov <= 1.0f)
+            fov = 1.0f;
+        if (fov >= 45.0f)
+            fov = 45.0f;
+    }
 }
 
 void TimerFunction(int value) {
@@ -498,6 +500,34 @@ void get_time() {
     float currentFrame = glutGet(GLUT_ELAPSED_TIME);
     delta_time = currentFrame - lastFrame;
     lastFrame = currentFrame;
+}
+
+void renderBitmapCharacter(string s) {
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0.0, WIDTH, 0.0, HEIGHT);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glColor3f(0.0, 1.0, 0.0);
+    glRasterPos2i(WIDTH / 3, HEIGHT - 30);
+
+    // string s = "Respect mah authoritah!";
+    void* font = GLUT_BITMAP_TIMES_ROMAN_24;
+    for (string::iterator i = s.begin(); i != s.end(); ++i)
+    {
+        char c = *i;
+        glutBitmapCharacter(font, c);
+    }
+
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
 }
 
 void throw_bomb() {
