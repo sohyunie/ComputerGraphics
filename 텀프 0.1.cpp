@@ -118,9 +118,9 @@ float robot_xpos[4] = { 0, };
 float robot_ypos[4] = { 0.0f };
 float robot_zpos[4] = { 0, };
 
-float player_xpos = 1.0f;
-float player_ypos = 1.0f;
-float player_zpos = 3.0f;
+float player_xpos = 0.0f;
+float player_ypos = 0.0f;
+float player_zpos = -20.0f;
 
 bool robot_default_move = true;
 
@@ -251,16 +251,14 @@ bool loadOBJ(
 
 }
 
+bool res_robot = loadOBJ("robot.obj", robot_vertices, robot_uvs, robot_normals);
 bool res_cube = loadOBJ("cube3.obj", cube_vertices, cube_uvs, cube_normals);
 
 // 카메라 벡터 선언
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraPos = glm::vec3(player_xpos, player_ypos, player_zpos);
+glm::vec3 cameraDirection = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
-glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
-glm::vec3 cameraUpn = glm::cross(cameraDirection, cameraRight);
+glm::vec3 cameraPos3 = glm::vec3(0.0f, 20.0f, 30.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 // 색 지정
@@ -312,6 +310,7 @@ void main(int argc, char** argv) {
 
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
+    // glutMouseFunc(Mouse);
     glutKeyboardFunc(Keyboard);
     glutTimerFunc(50, TimerFunction, 1);
     glutMainLoop();
@@ -334,7 +333,7 @@ void drawScene()
         glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
     }
     else {
-        view = glm::lookAt(cameraPos, cameraDirection, cameraUp);
+        view = glm::lookAt(cameraPos3, cameraDirection, cameraUp);
         GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
         glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
     }
@@ -344,19 +343,19 @@ void drawScene()
     GLuint Projectionlocation = glGetUniformLocation(s_program[0], "Projection");
     glUniformMatrix4fv(Projectionlocation, 1, GL_FALSE, value_ptr(projection));
 
-    S = glm::scale(glm::mat4(1.0f), glm::vec3(20.0, 0.1, 20.0));
-    Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(rt_y)), glm::vec3(0.0, 1.0, 0.0));
+    S = glm::scale(glm::mat4(1.0f), glm::vec3(0.7, 0.7, 0.7));
+    Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(180.0f)), glm::vec3(0.0, 1.0, 0.0));
     STR = Ry * S;
 
     T = glm::translate(glm::mat4(1.0f), glm::vec3((float)player_xpos, (float)player_ypos, (float)player_zpos));
-    Player_STR = Ry * T;
+    Player_STR = S * Ry * T;
     unsigned int Player = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(Player, 1, GL_FALSE, glm::value_ptr(Player_STR));
     unsigned int Color_Player = glGetUniformLocation(s_program[1], "in_Color");
     glUniform3f(Color_Player, Blue.r, Blue.g, Blue.b);
 
-    glBindVertexArray(VAO[0]);
-    glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
+    glBindVertexArray(VAO[1]);
+    glDrawArrays(GL_TRIANGLES, 0, robot_vertices.size());
 
     if (bomb_mode) {
         throw_bomb();
@@ -418,26 +417,26 @@ void Keyboard(unsigned char key, int x, int y) {
     glutPostRedisplay();
 }
 
-void mouse_click(int button, int state, int x, int y) {
-    if (button == GLUT_LEFT_BUTTON) {
-        if (state == GLUT_DOWN) {
-            dragging = 1;
-            drag_x_origin = x;
-            drag_y_origin = y;
-        }
-        else
-            dragging = 0;
-    }
-}
-
-void mouse_move(int x, int y) {
-    if (dragging) {
-        camera_angle_v += (y - drag_y_origin) * 0.3;
-        camera_angle_h += (x - drag_x_origin) * 0.3;
-        drag_x_origin = x;
-        drag_y_origin = y;
-    }
-}
+//void Mouse(int button, int state, int x, int y) {
+//    if (button == GLUT_LEFT_BUTTON) {
+//        if (state == GLUT_DOWN) {
+//            dragging = 1;
+//            drag_x_origin = x;
+//            drag_y_origin = y;
+//        }
+//        else
+//            dragging = 0;
+//    }
+//}
+//
+//void mouse_move(int x, int y) {
+//    if (dragging) {
+//        camera_angle_v += (y - drag_y_origin) * 0.3;
+//        camera_angle_h += (x - drag_x_origin) * 0.3;
+//        drag_x_origin = x;
+//        drag_y_origin = y;
+//    }
+//}
 
 void TimerFunction(int value) {
 
@@ -568,6 +567,18 @@ void InitBuffer()
     glBufferData(GL_ARRAY_BUFFER, cube_normals.size() * sizeof(glm::vec3), &cube_normals[0], GL_STATIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
+
+    // 로봇
+    glBindVertexArray(VAO[1]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
+    glBufferData(GL_ARRAY_BUFFER, robot_vertices.size() * sizeof(glm::vec3), &robot_vertices[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+    glBufferData(GL_ARRAY_BUFFER, robot_normals.size() * sizeof(glm::vec3), &robot_normals[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
 }
 
 void InitShader() {
@@ -618,5 +629,5 @@ void CalculateLight() {
     glUniform3f(view_pos, camera_x, camera_y, camera_z);
 
     unsigned int ambientLight_on = glGetUniformLocation(s_program[2], "ambientLight_on_off");
-    glUniform3f(ambientLight_on, 1.0, 1.0, 1.0);
+    glUniform3f(ambientLight_on, 0.7, 0.7, 0.7);
 }
