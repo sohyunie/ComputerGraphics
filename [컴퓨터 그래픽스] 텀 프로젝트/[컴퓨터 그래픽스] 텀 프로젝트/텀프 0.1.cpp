@@ -44,6 +44,7 @@ void CalculateLight();
 // 함수 선언
 void throw_bomb();
 void renderBitmapCharacter(string);
+void get_time();
 
 GLUquadricObj* qobj;
 
@@ -57,6 +58,8 @@ GLuint VAO[10], VBO[10];
 GLuint VAOCube[7], VBOCube[7];
 
 unsigned int texture;
+
+int HP = 10000;
 
 struct Shape {
     int index;
@@ -142,8 +145,8 @@ bool threed_mode = true;    // 시점 변환
 bool bomb_mode = false;     // 폭탄 던지기
 
 // time
-float delta_time = 0.0f;
-float lastFrame = 0.0f;
+int delta_time = 0.0f;
+int lastFrame = 0.0f;
 
 // 마우스 시점 변환 관련
 //double camera_angle_h = 0;
@@ -386,7 +389,12 @@ void drawScene()
     string msg = "WHY GGAM BBACK";
     renderBitmapCharacter(msg);
 
+    get_time();
+
     CalculateLight();
+
+    if (HP < 0)
+        exit(1);
 
     glutPostRedisplay();
     glutSwapBuffers();
@@ -445,7 +453,7 @@ void Mouse(int button, int state, int x, int y) {
     float yoffset = 0.0f;
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
 
-        printf("X, Y : (%d, %d)\n", x, y);
+        // printf("X, Y : (%d, %d)\n", x, y);
         if (firstMouse) {
             lastX = x;
             lastY = y;
@@ -457,7 +465,7 @@ void Mouse(int button, int state, int x, int y) {
         lastX = x;
         lastY = y;
 
-        printf("lastX, lastY : (%f, %f)\n", lastX, lastY);
+        // printf("lastX, lastY : (%f, %f)\n", lastX, lastY);
 
         float sensitivity = 1;
         xoffset *= sensitivity;
@@ -497,9 +505,13 @@ void TimerFunction(int value) {
 }
 
 void get_time() {
-    float currentFrame = glutGet(GLUT_ELAPSED_TIME);
+    int currentFrame = glutGet(GLUT_ELAPSED_TIME);
     delta_time = currentFrame - lastFrame;
     lastFrame = currentFrame;
+    HP -= delta_time;
+    if (HP % 100 == 0) {
+        printf("HP : %d \n", HP);
+    }
 }
 
 void renderBitmapCharacter(string s) {
