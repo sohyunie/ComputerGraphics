@@ -22,9 +22,9 @@
 
 #define WIDTH 800
 #define HEIGHT 600
-
 using namespace std;
 
+// 기본 함수 선언
 char* filetobuf(char*);
 void make_vertexShader();
 void make_fragmentShader();
@@ -38,6 +38,9 @@ void drawScene();
 void TimerFunction(int);
 void Keyboard(unsigned char, int, int);
 void CalculateLight();
+
+// 함수 선언
+void throw_bomb();
 
 GLUquadricObj* qobj;
 
@@ -115,9 +118,9 @@ float robot_xpos[4] = { 0, };
 float robot_ypos[4] = { 0.0f };
 float robot_zpos[4] = { 0, };
 
-float player_xpos = 0.0f;
+float player_xpos = 1.0f;
 float player_ypos = 1.0f;
-float player_zpos = 0.0f;
+float player_zpos = 3.0f;
 
 bool robot_default_move = true;
 
@@ -132,7 +135,15 @@ bool camerarotateY = false;
 int cameraAngleDirection = 1;
 int cameraAngleDirectionY = 1;
 
-bool threed_mode = true;
+bool threed_mode = true;    // 시점 변환
+bool bomb_mode = false;     // 폭탄 던지기
+
+// 마우스 시점 변환 관련
+double camera_angle_h = 0;
+double camera_angle_v = 0;
+int drag_x_origin;
+int drag_y_origin;
+int dragging = 0;
 
 float Background[] = {
     -1.0,1.0,-1.0, 0.0,1.0,0.0, 1.0,1.0,
@@ -242,12 +253,38 @@ bool loadOBJ(
 
 bool res_cube = loadOBJ("cube3.obj", cube_vertices, cube_uvs, cube_normals);
 
-
-glm::vec3 cameraPos = glm::vec3(player_xpos, player_ypos, player_zpos);
-glm::vec3 cameraDirection = glm::vec3(0.0f, 0.0f, 0.0f);
+// 카메라 벡터 선언
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraPos3 = glm::vec3(0.0f, 20.0f, 30.0f);
+glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
+glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+glm::vec3 cameraUpn = glm::cross(cameraDirection, cameraRight);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+// 색 지정
+glm::vec3 Red = glm::vec3(1.0f, 0.0f, 0.0f);
+glm::vec3 Green = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::vec3 Blue = glm::vec3(0.0f, 0.0f, 1.0f);
+glm::vec3 Gray = glm::vec3(0.7f, 0.7f, 0.7f);
+glm::vec3 White = glm::vec3(1.0f, 1.0f, 1.0f);
+glm::vec3 Black = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 Yellow = glm::vec3(1.0f, 1.0f, 0.0f);
+glm::vec3 Brown = glm::vec3(0.6f, 0.3f, 0.0f);
+
+// 변환에 이용되는 매트릭스
+glm::mat4 S = glm::mat4(1.0f);
+glm::mat4 T = glm::mat4(1.0f);
+glm::mat4 Tx = glm::mat4(1.0f);
+glm::mat4 Rx = glm::mat4(1.0f);
+glm::mat4 Ry = glm::mat4(1.0f);
+glm::mat4 RxY = glm::mat4(1.0f);
+glm::mat4 STR = glm::mat4(1.0f);
+glm::mat4 Bomb_STR = glm::mat4(1.0f);
+glm::mat4 Robot_STR = glm::mat4(1.0f);
+glm::mat4 Player_STR = glm::mat4(1.0f);
+glm::mat4 view = glm::mat4(1.0f);
 
 void main(int argc, char** argv) {
 
@@ -289,29 +326,7 @@ void drawScene()
     glUseProgram(s_program[1]);
     glUseProgram(s_program[2]);
 
-    glm::vec3 Red = glm::vec3(1.0f, 0.0f, 0.0f);
-    glm::vec3 Green = glm::vec3(0.0f, 1.0f, 0.0f);
-    glm::vec3 Blue = glm::vec3(0.0f, 0.0f, 1.0f);
-    glm::vec3 Gray = glm::vec3(0.7f, 0.7f, 0.7f);
-    glm::vec3 White = glm::vec3(1.0f, 1.0f, 1.0f);
-    glm::vec3 Black = glm::vec3(0.0f, 0.0f, 0.0f);
-    glm::vec3 Yellow = glm::vec3(1.0f, 1.0f, 0.0f);
-    glm::vec3 Brown = glm::vec3(0.6f, 0.3f, 0.0f);
-
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    qobj = gluNewQuadric();
-
-    glm::mat4 S = glm::mat4(1.0f);
-    glm::mat4 T = glm::mat4(1.0f);
-    glm::mat4 Tx = glm::mat4(1.0f);
-    glm::mat4 Rx = glm::mat4(1.0f);
-    glm::mat4 Ry = glm::mat4(1.0f);
-    glm::mat4 RxY = glm::mat4(1.0f);
-    glm::mat4 STR = glm::mat4(1.0f);
-    glm::mat4 Robot_STR = glm::mat4(1.0f);
-    glm::mat4 Player_STR = glm::mat4(1.0f);
-    glm::mat4 view = glm::mat4(1.0f);
 
     if (!threed_mode) {
         view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
@@ -319,7 +334,7 @@ void drawScene()
         glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
     }
     else {
-        view = glm::lookAt(cameraPos3, cameraDirection, cameraUp);
+        view = glm::lookAt(cameraPos, cameraDirection, cameraUp);
         GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
         glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
     }
@@ -343,6 +358,12 @@ void drawScene()
     glBindVertexArray(VAO[0]);
     glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
 
+    if (bomb_mode) {
+        throw_bomb();
+        // throw_bomb = false;
+        // 적 구현 이후에 timer함수에서 움직이는거 구현
+    }
+
     CalculateLight();
 
     glutPostRedisplay();
@@ -362,25 +383,25 @@ void Keyboard(unsigned char key, int x, int y) {
         if (!threed_mode) {
             cameraPos += cameraSpeed * cameraFront;
         }
-        player_zpos -= 1.0f;
+        player_zpos += 1.0f;
         break;
     case 'a':
         if (!threed_mode) {
-            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
         }
-        player_xpos -= 1.0f;
+        player_xpos += 1.0f;
         break;
     case 's':
         if (!threed_mode) {
             cameraPos -= cameraFront * cameraSpeed;
         }
-        player_zpos += 1.0f;
+        player_zpos -= 1.0f;
         break;
     case 'd':
         if (!threed_mode) {
-            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
         }
-        player_xpos += 1.0f;
+        player_xpos -= 1.0f;
         break;
     case 'c':
     case 'C':
@@ -389,13 +410,72 @@ void Keyboard(unsigned char key, int x, int y) {
         else
             threed_mode = false;
         break;
+    case 'b':
+        // 일단 보이는것만.. b로 구현함 ㅠㅠ
+        bomb_mode = true;
+        break;
     }
     glutPostRedisplay();
 }
 
+void mouse_click(int button, int state, int x, int y) {
+    if (button == GLUT_LEFT_BUTTON) {
+        if (state == GLUT_DOWN) {
+            dragging = 1;
+            drag_x_origin = x;
+            drag_y_origin = y;
+        }
+        else
+            dragging = 0;
+    }
+}
+
+void mouse_move(int x, int y) {
+    if (dragging) {
+        camera_angle_v += (y - drag_y_origin) * 0.3;
+        camera_angle_h += (x - drag_x_origin) * 0.3;
+        drag_x_origin = x;
+        drag_y_origin = y;
+    }
+}
+
 void TimerFunction(int value) {
+
     glutTimerFunc(10, TimerFunction, 1);
 }
+
+void throw_bomb() {
+    qobj = gluNewQuadric();
+
+    // Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(Mercury_y)), glm::vec3(0.0, 1.0, 0.0));
+    S = glm::scale(glm::mat4(1.0f), glm::vec3(1.5, 1.5, 1.5));
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(5.0, 0.0, 0.0));
+    //Planet_STR = Circle_STR * Ry * T;
+    Bomb_STR = S * T;
+    unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(Bomb_STR));
+    unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
+    glUniform3f(Color_Bomb, Red.r, Red.g, Red.b);
+    gluSphere(qobj, 0.5, 20, 20);
+}
+
+//void DrawHPTimer(int winPosX, int WinPosY, char* strMsg, void* font, double color[3]) {
+//    DrawText(10, 10, "test", GLUT_BITMAP_8_BY_13, m_fFontColor);
+//
+//    // draw text on screen
+//    double FontWidth = 0.02;
+//    double GLPosX, GLPosY, GLPosZ;
+//    WinPosToWorldPos(WinPosX, WinPosY, 0, &GLPosX, &GLPosY, &GLPosZ);
+//
+//    glColor3f(Color[R], Color[G], Color[B]);
+//
+//    int len = (int)strlen(strMsg);
+//    glRasterPost3d(GLPosX, GLPosY, GLPosZ);
+//    
+//    for (int i = 0; i < len; i++) {
+//        glutBitmapCharacter(font, strMsg[i]);
+//    }
+// }
 
 GLvoid Reshape(int w, int h) {
     glViewport(0, 0, w, h);
