@@ -423,9 +423,12 @@ void DrawCube(Shape shape)
     glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
 }
 
-void DrawEnemy() {
-
-}
+//void DrawEnemy() {
+//    glBindVertexArray(vao[1]);
+//    glActiveTexture(GL_TEXTURE0);
+//    glBindTexture(GL_TEXTURE_2D, texture[0]);
+//    glDrawArrays(GL_TRIANGLES, 0, 6);
+//}
 
 
 void DrawBoard()
@@ -816,24 +819,92 @@ void InitShader() {
     }
 }
 
-void InitTexture()
-{
-    int imagewidth, imageheight, numofChannel;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    stbi_set_flip_vertically_on_load(true);
-    unsigned char* bg = stbi_load("bg.jpg", &imagewidth, &imageheight, &numofChannel, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, imagewidth, imageheight, 0, GL_RGB, GL_UNSIGNED_BYTE, bg);
-    stbi_image_free(bg);
-
-    glUseProgram(s_program[2]);
-    int tLocation = glGetUniformLocation(s_program[2], "outTexture");
-    glUniform1i(tLocation, 0);
-}
+//void InitTexture()
+//{
+//    int width[10], height[10], nrChannels[10];
+//    stbi_set_flip_vertically_on_load(true);
+//    //BITMAPINFO* bmp;
+//    //--- texture 1
+//    glGenTextures(1, &texture[0]);
+//    glBindTexture(GL_TEXTURE_2D, texture[0]);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//
+//    unsigned char* data1 = stbi_load("1.bmp", &width[0], &height[0], &nrChannels[0], 0);
+//
+//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width[0], height[0], 0, GL_RGB, GL_UNSIGNED_BYTE, data1);
+//    glGenerateMipmap(GL_TEXTURE_2D);
+//    //glUseProgram(s_program);
+//    //int tLocation1 = glGetUniformLocation(s_program, "exTexture");
+//    //glUniform1i(tLocation1, 0);
+//    stbi_image_free(data1);
+//
+//
+//    //--- texture 2
+//    glGenTextures(1, &texture[1]);
+//    glBindTexture(GL_TEXTURE_2D, texture[1]);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//    stbi_set_flip_vertically_on_load(true);
+//    unsigned char* data2 = stbi_load("2.bmp", &width[1], &height[1], &nrChannels[1], 0);
+//
+//    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[1], height[1], 0, GL_RGB, GL_UNSIGNED_BYTE, data2);
+//    stbi_image_free(data2);
+//
+//    //--- texture 3
+//    glGenTextures(1, &texture[2]);
+//    glBindTexture(GL_TEXTURE_2D, texture[2]);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//    stbi_set_flip_vertically_on_load(true);
+//    unsigned char* data3 = stbi_load("3.bmp", &width[2], &height[2], &nrChannels[2], 0);
+//
+//    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[2], height[2], 0, GL_RGB, GL_UNSIGNED_BYTE, data3);
+//    stbi_image_free(data3);
+//    //--- texture 3
+//    glGenTextures(1, &texture[3]);
+//    glBindTexture(GL_TEXTURE_2D, texture[3]);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//    stbi_set_flip_vertically_on_load(true);
+//    unsigned char* data4 = stbi_load("4.bmp", &width[3], &height[3], &nrChannels[3], 0);
+//
+//    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[3], height[3], 0, GL_RGB, GL_UNSIGNED_BYTE, data4);
+//    stbi_image_free(data4);
+//
+//    glGenTextures(1, &texture[4]);
+//    glBindTexture(GL_TEXTURE_2D, texture[4]);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//    //stbi_set_flip_vertically_on_load(true);
+//    unsigned char* data5 = stbi_load("5.bmp", &width[4], &height[4], &nrChannels[4], 0);
+//
+//    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[4], height[4], 0, GL_RGB, GL_UNSIGNED_BYTE, data5);
+//    stbi_image_free(data5);
+//
+//
+//    glGenTextures(1, &texture[5]);
+//    glBindTexture(GL_TEXTURE_2D, texture[5]);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//    //stbi_set_flip_vertically_on_load(true);
+//    unsigned char* data6 = stbi_load("6.bmp", &width[5], &height[5], &nrChannels[5], 0);
+//
+//    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[5], height[5], 0, GL_RGB, GL_UNSIGNED_BYTE, data6);
+//    stbi_image_free(data6);
+//}
 
 // 조명 계산
 void CalculateLight(float lgt_x, float lgt_y, float lgt_z, float amb) {
