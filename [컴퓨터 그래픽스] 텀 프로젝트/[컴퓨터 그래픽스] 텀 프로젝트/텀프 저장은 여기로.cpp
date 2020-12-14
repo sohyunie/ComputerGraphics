@@ -59,6 +59,7 @@ void DrawBoard();
 void throw_bomb();
 void DrawPlayer();
 void DrawCube();
+void Draw2ndCube();
 void DrawEnemy();
 void make_enemy_pos();
 
@@ -429,6 +430,7 @@ glm::mat4 STR = glm::mat4(1.0f);
 glm::mat4 Bomb_STR = glm::mat4(1.0f);
 glm::mat4 Robot_STR = glm::mat4(1.0f);
 glm::mat4 cubeSTR = glm::mat4(1.0f);
+glm::mat4 seccubeSTR = glm::mat4(1.0f);
 glm::mat4 EnemySTR = glm::mat4(1.0f);
 glm::mat4 view = glm::mat4(1.0f);
 
@@ -504,6 +506,25 @@ void DrawCube(Shape shape)
     glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
 }
 
+void Draw2ndCube(Shape shape) {
+    glm::mat4 S = glm::mat4(1.0f);
+    glm::mat4 T = glm::mat4(1.0f);
+    glm::mat4 STR = glm::mat4(1.0f);
+
+    S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
+    STR *= S;
+
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y * 2, shape.pos.z));
+    seccubeSTR = S * T;
+    unsigned int transform2ndCube = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(transform2ndCube, 1, GL_FALSE, glm::value_ptr(seccubeSTR));
+    unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
+    glUniform3f(colorCube, shape.color.x, shape.color.y, shape.color.z);
+
+    glBindVertexArray(VAO[0]);
+    glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
+}
+
 void DrawEnemy() {
     //glBindVertexArray(vao[1]);
     //glActiveTexture(GL_TEXTURE0);
@@ -535,6 +556,7 @@ void DrawBoard()
             case BOARD_TYPE::WALL:
             case BOARD_TYPE::FIXED_WALL:
                 DrawCube(boardShape[i][j]);
+                Draw2ndCube(boardShape[i][j]);
                 break;
             case BOARD_TYPE::ITEM:
                 break;
@@ -572,7 +594,7 @@ void drawScene()
     GLuint Projectionlocation = glGetUniformLocation(s_program[0], "Projection");
     glUniformMatrix4fv(Projectionlocation, 1, GL_FALSE, value_ptr(projection));
 
-    //DrawBoard();
+    DrawBoard();
     DrawPlayer();
 
     if (enemy_valid) {
@@ -793,8 +815,19 @@ int Loadfile(int mapCollect)
                 fscanf(fp, "%d", &cha);
 
                 boardShape[i][j].type = (BOARD_TYPE)cha;
-                boardShape[i][j].pos = Vector3(i * 2.5f, 0, j * 2.5f);
-                boardShape[i][j].scale = Vector3(1.0, 1.0, 1.0);
+                if (i < SIZE / 2 && j < SIZE / 2) {
+                    boardShape[i][j].pos = Vector3(i * 2.5f - 15, 0, j * 2.5f - 15);
+                }
+                else if (i < SIZE / 2 && j > SIZE / 2) {
+                    boardShape[i][j].pos = Vector3(i * 2.5f - 15, 0, j * 2.5f);
+                }
+                else if (i > SIZE / 2 && j < SIZE / 2) {
+                    boardShape[i][j].pos = Vector3(i * 2.5f, 0, j * 2.5f - 15);
+                }
+                else if (i > SIZE / 2 && j > SIZE / 2) {
+                    boardShape[i][j].pos = Vector3(i * 2.5f, 0, j * 2.5f);
+                }
+                boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
                 if (boardShape[i][j].type == FIXED_WALL)
                     boardShape[i][j].color = Vector3(0.7, 0.7, 0.7);
                 else
