@@ -1,18 +1,19 @@
+
 #define STB_IMAGE_IMPLEMENTATION
 #include"stb_image.h"
 #include "ReadObj.h"
 
 #pragma warning(disable:4996)
 #include <iostream>
+#include <fstream>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 #include <random>
 #include <time.h>
 #include <windows.h>
-#include <string.h>
 #include <vector>
-
 #include <gl/glew.h> 
 #include <gl/freeglut.h>
 #include <gl/freeglut_ext.h>
@@ -23,6 +24,17 @@
 
 #define WIDTH 800
 #define HEIGHT 600
+
+#define MAXFPS 60
+
+#define MAP_1 "C:\Users\sumin\Desktop\2020\컴퓨터 그래픽스\termproj_git\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\MAP_Veryeasy.txt"
+#define MAP_2 "MAP_Easy.txt"
+#define MAP_3 "MAP_Normal.txt"
+#define MAP_4 "MAP_Hard.txt"
+#define MAP_5 "MAP_Veryhard.txt"
+#define INIT "MAP_Veryeasy.txt"
+
+#define SIZE 22 // 맵 사이즈
 using namespace std;
 
 // 기본 함수 선언
@@ -43,6 +55,9 @@ void CalculateLight();
 
 // 함수 선언
 void throw_bomb();
+int Loadfile();
+void remain();
+void board_maker();
 void renderBitmapCharacter(string);
 void get_time();
 
@@ -57,9 +72,19 @@ GLuint vertexshader, lineVertexShader, fragmentshader;
 GLuint VAO[10], VBO[10];
 GLuint VAOCube[7], VBOCube[7];
 
-unsigned int texture;
+///////////////////////////////////////////////////////////////
+// 맵 파일 입출력
+GLubyte* LoadDIBitmap(const char* filename, BITMAPINFO** info);
+GLubyte* pBytes; // 데이터를 가리킬 포인터
+BITMAPINFO* info; // 비트맵 헤더 저장할 변수
+GLuint textures[1];
+void initTextures();
 
-int HP = 10000;
+int mapcollect = 0;
+int makeboard[SIZE][SIZE] = { 0 };
+float colorbuffer[4][3] = { 0 };
+
+unsigned int texture;
 
 struct Shape {
     int index;
@@ -145,8 +170,8 @@ bool threed_mode = true;    // 시점 변환
 bool bomb_mode = false;     // 폭탄 던지기
 
 // time
-int delta_time = 0.0f;
-int lastFrame = 0.0f;
+float delta_time = 0.0f;
+float lastFrame = 0.0f;
 
 // 마우스 시점 변환 관련
 //double camera_angle_h = 0;
@@ -274,7 +299,7 @@ glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraPos3 = glm::vec3(0.0f, 20.0f, 30.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-glm::vec3 cameraPosM = glm::vec3(0.0f, 1.0f, 3.0f);
+glm::vec3 cameraPosM = glm::vec3(0.0f, 0.0f, 3.0f);
 float radius = 5.0f;
 float cameraX = sin(glutGet(GLUT_ELAPSED_TIME)) * radius;
 float cameraZ = cos(glutGet(GLUT_ELAPSED_TIME)) * radius;
@@ -330,6 +355,9 @@ void main(int argc, char** argv) {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
+    Loadfile();
+    board_maker();
+
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
     glutMouseFunc(Mouse);
@@ -379,22 +407,19 @@ void drawScene()
     glBindVertexArray(VAO[1]);
     glDrawArrays(GL_TRIANGLES, 0, robot_vertices.size());
 
-    //if (bomb_mode) {
-    //    throw_bomb();
-    //    // throw_bomb = false;
-    //    // 적 구현 이후에 timer함수에서 움직이는거 구현
-    //}
-    throw_bomb();
+    if (bomb_mode) {
+        throw_bomb();
+        // throw_bomb = false;
+        // 적 구현 이후에 timer함수에서 움직이는거 구현
+    }
 
+    throw_bomb();
     string msg = "WHY GGAM BBACK";
     renderBitmapCharacter(msg);
 
     get_time();
 
     CalculateLight();
-
-    if (HP < 0)
-        exit(1);
 
     glutPostRedisplay();
     glutSwapBuffers();
@@ -448,43 +473,60 @@ void Keyboard(unsigned char key, int x, int y) {
     glutPostRedisplay();
 }
 
+//void Mouse(int button, int state, int x, int y) {
+//    if (button == GLUT_LEFT_BUTTON) {
+//        if (state == GLUT_DOWN) {
+//            dragging = 1;
+//            drag_x_origin = x;
+//            drag_y_origin = y;
+//        }
+//        else
+//            dragging = 0;
+//    }
+//}
+//
+//void mouse_move(int x, int y) {
+//    if (dragging) {
+//        camera_angle_v += (y - drag_y_origin) * 0.3;
+//        camera_angle_h += (x - drag_x_origin) * 0.3;
+//        drag_x_origin = x;
+//        drag_y_origin = y;
+//    }
+//}
+
 void Mouse(int button, int state, int x, int y) {
-    float xoffset = 0.0f;
-    float yoffset = 0.0f;
-    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-
-        // printf("X, Y : (%d, %d)\n", x, y);
-        if (firstMouse) {
-            lastX = x;
-            lastY = y;
-            firstMouse = false;
-        }
-
-        xoffset = x - lastX;
-        yoffset = lastY - y;
+    if (firstMouse)
+    {
         lastX = x;
         lastY = y;
-
-        // printf("lastX, lastY : (%f, %f)\n", lastX, lastY);
-
-        float sensitivity = 1;
-        xoffset *= sensitivity;
-        yoffset *= sensitivity;
-
-        yaw += xoffset;
-        pitch += yoffset;
-
-        if (pitch > 89.0f)
-            pitch = 89.0f;
-        if (pitch < -89.0f)
-            pitch = -89.0f;
-
-        glm::vec3 front;
-        front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-        front.y = sin(glm::radians(pitch));
-        front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-        cameraFront = glm::normalize(front);
+        firstMouse = false;
     }
+
+    float xoffset = x - lastX;
+    float yoffset = lastY - y;
+    lastX = x;
+    lastY = y;
+
+    printf("lastX, lastY : (%f, %f)\n", lastX, lastY);
+
+    float sensitivity = 1;
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw += xoffset;
+    pitch += yoffset;
+
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(front);
+
     if ((button == 3) || (button == 4)) {
         if (state == GLUT_UP)
             return;
@@ -504,15 +546,43 @@ void TimerFunction(int value) {
     glutTimerFunc(10, TimerFunction, 1);
 }
 
+int HP = 10000;
+
+const double fpsLimit = 1.0 / 60.0;
+float lastUpdate = 0.0f;
+
 void get_time() {
-    int currentFrame = glutGet(GLUT_ELAPSED_TIME);
-    delta_time = currentFrame - lastFrame;
-    lastFrame = currentFrame;
-    HP -= delta_time;
+    float currentFrame = glutGet(GLUT_ELAPSED_TIME);
+    delta_time = currentFrame - lastUpdate;
+
+
+    if ((currentFrame - lastFrame) >= fpsLimit) {
+        lastFrame = currentFrame;
+    }
+    lastUpdate = currentFrame;
+
+    HP -= lastUpdate;
+    printf("deltatime : %f\n", delta_time);
     if (HP % 100 == 0) {
         printf("HP : %d \n", HP);
     }
 }
+
+void throw_bomb() {
+    qobj = gluNewQuadric();
+
+    // Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(Mercury_y)), glm::vec3(0.0, 1.0, 0.0));
+    S = glm::scale(glm::mat4(1.0f), glm::vec3(1.5, 1.5, 1.5));
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(5.0, 0.0, 0.0));
+    //Planet_STR = Circle_STR * Ry * T;
+    Bomb_STR = S * T;
+    unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(Bomb_STR));
+    unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
+    glUniform3f(Color_Bomb, Red.r, Red.g, Red.b);
+    gluSphere(qobj, 0.5, 20, 20);
+}
+
 
 void renderBitmapCharacter(string s) {
     glMatrixMode(GL_PROJECTION);
@@ -542,21 +612,379 @@ void renderBitmapCharacter(string s) {
     glPopMatrix();
 }
 
-void throw_bomb() {
-    qobj = gluNewQuadric();
+FILE* fp;
+////////////////////////////////////////////////////////////////////////
+// 맵을 읽어옵시다
+int Loadfile()
+{
+    printf("fdksjalfnvsafjwelscdk,njfal.\n");
 
-    // Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(Mercury_y)), glm::vec3(0.0, 1.0, 0.0));
-    S = glm::scale(glm::mat4(1.0f), glm::vec3(1.5, 1.5, 1.5));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(5.0, 0.0, 0.0));
-    //Planet_STR = Circle_STR * Ry * T;
-    Bomb_STR = S * T;
-    unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
-    glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(Bomb_STR));
-    unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
-    glUniform3f(Color_Bomb, Red.r, Red.g, Red.b);
-    gluSphere(qobj, 0.5, 20, 20);
+    switch (mapcollect)
+    {
+    case 0:
+        printf("fdksjalfnvsafjwelscdk,njfal.\n");
+        fp = fopen(MAP_1, "rt");
+        break;
+    case 1:
+        fp = fopen(MAP_2, "rt");
+        break;
+    case 2:
+        fp = fopen(MAP_3, "rt");
+        break;
+    case 3:
+        fp = fopen(MAP_4, "rt");
+        break;
+    case 4:
+        fp = fopen(MAP_5, "rt");
+        break;
+    case 5:
+        fp = fopen(INIT, "rt");
+        break;
+    }
+
+    if (fp == NULL)
+    {
+        printf("\n실패\n");
+        printf("errno = %s\n", strerror(errno));
+        return 1;
+    }
+
+    printf("\n완료\n");
+
+    int cha;
+
+    while (feof(fp) == 0)
+    {
+        for (int i = 0; i < SIZE; i++)
+        {
+            for (int j = 0; j < SIZE; j++)
+            {
+                fscanf(fp, "%d", &cha);
+                makeboard[i][j] = cha;
+            }
+        }
+    }
+    fclose(fp);
+
+    return 1;
 }
 
+// 이젠 맵을 그릴거예요
+
+float obj_rot = 0;
+void draw_block()
+{
+    glPushMatrix();
+    {
+        glColor3f(colorbuffer[0][0], colorbuffer[0][1], colorbuffer[0][2]);
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+
+        glColor3f(colorbuffer[1][0], colorbuffer[1][1], colorbuffer[1][2]);
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+
+        glColor3f(colorbuffer[2][0], colorbuffer[2][1], colorbuffer[2][2]);
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+
+        glColor3f(colorbuffer[3][0], colorbuffer[3][1], colorbuffer[3][2]);
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+    }
+    glPopMatrix();
+}
+
+void item()
+{
+    glPushMatrix();
+    {
+        glEnable(GL_BLEND);
+        glPushMatrix();
+        {
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            //glColor3f(0.7, 0.2, 0.2);
+            glTranslatef(0, 2, 0);
+            glColor4f(0, 0.8, 0, 0.8);
+            glRotatef(obj_rot, 0, 1, 0);
+            glutSolidCube(0.3);
+        }
+        glPopMatrix();
+
+        glPushMatrix();
+        {
+            glColor4f(0.7, 0, 0, 0.5);
+            glTranslatef(0, 2, 0);
+            glRotatef(obj_rot, 0, 1, 0);
+            glRotatef(90, -1, 0, -1);
+            glutSolidCube(0.6);
+        }
+        glPopMatrix();
+
+        glDisable(GL_BLEND);
+    }
+    glPopMatrix();
+}
+
+void Line_block()
+{
+    glColor3f(0.7, 0.7, 0.7);
+
+    glPushMatrix();
+    {
+        glNormal3f(0, 1, 0);
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+
+        glTranslatef(0, 1.1, 0);
+        glutSolidCube(1);
+    }
+    glPopMatrix();
+}
+
+void remain()
+{
+    glPushMatrix();
+    {
+        glEnable(GL_BLEND);
+        glPushMatrix();
+        {
+            //glScaled(1.5,1,1.5);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            //glColor3f(0.7, 0.2, 0.2);
+            glTranslatef(0, 0.6, 0);
+            glColor4f(0, 0.5, 0.5, 0.8);
+            glRotatef(obj_rot, 0, 1, 0);
+            glutSolidSphere(0.1, 15, 15);
+            //glutSolidCube(0.1);
+        }
+        glPopMatrix();
+
+        glPushMatrix();
+        {
+            //glScaled(1.5, 1, 1.5);
+            glColor4f(0.0, 0.0, 0.8, 0.5);
+            glTranslatef(0, 0.6, 0);
+            glRotatef(obj_rot + 5, 0, 1, 0);
+            glRotatef(90, -1, 0, -1);
+            //glutSolidSphere(0.15, 15, 15);
+            glutSolidCube(0.25);
+        }
+        glPopMatrix();
+
+        glDisable(GL_BLEND);
+    }
+    glPopMatrix();
+}
+
+void board_maker()
+{
+    for (int i = 0; i < SIZE; i++)
+    {
+        for (int j = 0; j < SIZE; j++)
+        {
+            if (makeboard[i][j] == 1)
+            {
+                glPushMatrix();
+                {
+                    glTranslatef(i * 1.1 - 15, 0, j * 1.1 - 15);
+                    draw_block();
+                }
+                glPopMatrix(); // 블럭 표시
+
+                glColor3f(1, 0, 0);
+                glLineWidth(1);
+                //glBegin(GL_LINE_LOOP);
+                //{
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].min_z);
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].min_z);
+                //}
+                //glEnd();
+                glLineWidth(1); // 블럭 위치
+            }
+            else if (makeboard[i][j] == 2)
+            {
+                glPushMatrix();
+                {
+                    glTranslatef(i * 1.1 - 15, 0, j * 1.1 - 15);
+                    item();
+                }
+                glPopMatrix(); // 아이템 표시
+
+                glColor3f(0, 1, 0);
+                glLineWidth(1);
+                //glBegin(GL_LINE_LOOP);
+                //{
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].min_z);
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].min_z);
+                //}
+                //glEnd();
+                glLineWidth(1); // 아이템 위치
+            }
+            else if (makeboard[i][j] == 3)
+            {
+                glPushMatrix();
+                {
+                    glTranslatef(i * 1.1 - 15, 1.5, j * 1.1 - 15);
+                    glColor3f(0.0, 0.0, 0.0);
+
+                    glBindTexture(GL_TEXTURE_2D, textures[1]);
+                    glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+                    glBegin(GL_QUADS);
+                    {
+                        glTexCoord2f(1, 1);
+                        glVertex3f(-1.0f, 2.0f, 1.0f);
+                        glTexCoord2f(0, 1);
+                        glVertex3f(-1.0f, -2.0f, 1.0f);
+                        glTexCoord2f(0, 0);
+                        glVertex3f(1.0f, -2.0f, 1.0f);
+                        glTexCoord2f(1, 0);
+                        glVertex3f(1.0f, 2.0f, 1.0f);
+                    }
+                    glEnd();
+                    //오른쪽
+                    glBindTexture(GL_TEXTURE_2D, textures[1]);
+                    glBegin(GL_QUADS);
+                    {
+                        glTexCoord2f(1, 1);
+                        glVertex3f(1.0f, 2.0f, 1.0f);
+                        glTexCoord2f(0, 1);
+                        glVertex3f(1.0f, -2.0f, 1.0f);
+                        glTexCoord2f(0, 0);
+                        glVertex3f(1.0f, -2.0f, -1.0f);
+                        glTexCoord2f(1, 0);
+                        glVertex3f(1.0f, 2.0f, -1.0f);
+                    }
+                    glEnd();
+                    //뒷쪽
+                    glBindTexture(GL_TEXTURE_2D, textures[1]);
+                    glBegin(GL_QUADS);
+                    {
+                        glTexCoord2f(1, 1);
+                        glVertex3f(1.0f, 2.0f, -1.0f);
+                        glTexCoord2f(0, 1);
+                        glVertex3f(1.0f, -2.0f, -1.0f);
+                        glTexCoord2f(0, 0);
+                        glVertex3f(-1.0f, -2.0f, -1.0f);
+                        glTexCoord2f(1, 0);
+                        glVertex3f(-1.0f, 2.0f, -1.0f);
+                    }
+                    glEnd();
+                    ////왼쪽
+                    glBindTexture(GL_TEXTURE_2D, textures[1]);
+                    glBegin(GL_QUADS);
+                    {
+                        glTexCoord2f(1, 1);
+                        glVertex3f(-1.0f, 2.0f, -1.0f);
+                        glTexCoord2f(0, 1);
+                        glVertex3f(-1.0f, -2.0f, -1.0f);
+                        glTexCoord2f(0, 0);
+                        glVertex3f(-1.0f, -2.0f, 1.0f);
+                        glTexCoord2f(1, 0);
+                        glVertex3f(-1.0f, 2.0f, 1.0f);
+                    }
+                    glEnd();
+                    ////아랫쪽
+                    glBindTexture(GL_TEXTURE_2D, textures[1]);
+                    glBegin(GL_QUADS);
+                    {
+                        glTexCoord2f(1, 1);
+                        glVertex3f(-1.0f, -2.0f, 1.0f);
+                        glTexCoord2f(0, 1);
+                        glVertex3f(-1.0f, -2.0f, -1.0f);
+                        glTexCoord2f(0, 0);
+                        glVertex3f(1.0f, -2.0f, -1.0f);
+                        glTexCoord2f(1, 0);
+                        glVertex3f(1.0f, -2.0f, 1.0f);
+                    }
+                    glEnd();
+                    ////윗쪽
+                    glBindTexture(GL_TEXTURE_2D, textures[1]);
+                    glBegin(GL_QUADS);
+                    {
+                        glTexCoord2f(1, 1);
+                        glVertex3f(-1.0f, 2.0f, 1.0f);
+                        glTexCoord2f(0, 1);
+                        glVertex3f(-1.0f, 2.0f, -1.0f);
+                        glTexCoord2f(0, 0);
+                        glVertex3f(1.0f, 2.0f, -1.0f);
+                        glTexCoord2f(1, 0);
+                        glVertex3f(1.0f, 2.0f, 1.0f);
+                    }
+                    glEnd();
+                }
+                glPopMatrix(); // 도착지 표시
+
+                glColor3f(0, 0, 1);
+                glLineWidth(1);
+                //glBegin(GL_LINE_LOOP);
+                //{
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].min_z);
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].min_z);
+                //}
+                //glEnd();
+                glLineWidth(1); // 도착지 위치
+            }
+            else if (makeboard[i][j] == 4)
+            {
+                glPushMatrix();
+                {
+                    glTranslatef(i * 1.1 - 15, 0, j * 1.1 - 15);
+                    remain();
+                }
+                glPopMatrix();
+
+                glColor3f(0, 1, 0);
+                //glLineWidth(1);
+                //glBegin(GL_LINE_LOOP);
+                //{
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].min_z);
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].min_z);
+                //}
+                //glEnd();
+                //glLineWidth(1); // 아이템 위치
+            }
+            if (makeboard[i][j] == 5)
+            {
+                glPushMatrix();
+                {
+                    glTranslatef(i * 1.1 - 15, 0, j * 1.1 - 15);
+                    Line_block();
+                }
+                glPopMatrix(); // 블럭 표시
+
+                glColor3f(1, 0, 0);
+                glLineWidth(1);
+                //glBegin(GL_LINE_LOOP);
+                //{
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].max_z);
+                //	glVertex3f(static_block[i][j].min_x, 1, static_block[i][j].min_z);
+                //	glVertex3f(static_block[i][j].max_x, 1, static_block[i][j].min_z);
+                //}
+                //glEnd();
+                glLineWidth(1); // 블럭 위치
+            }
+        }
+    }
+}
 //void DrawHPTimer(int winPosX, int WinPosY, char* strMsg, void* font, double color[3]) {
 //    DrawText(10, 10, "test", GLUT_BITMAP_8_BY_13, m_fFontColor);
 //
