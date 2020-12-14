@@ -94,7 +94,7 @@ void DrawPlayer();
 void DrawCube();
 void Draw2ndCube();
 void DrawEnemy();
-void make_enemy_pos();
+void DrawKey();
 
 GLUquadricObj* qobj;
 
@@ -117,7 +117,7 @@ BITMAPINFO* info; // 비트맵 헤더 저장할 변수
 GLuint textures[1];
 void initTextures();
 
-int mapCollect = 0;
+int mapCollect = rand() % 4;
 float colorbuffer[4][3] = { 0 };
 
 Shape boardShape[SIZE][SIZE];
@@ -301,13 +301,17 @@ SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.0f, 0.0,0.0,//3
  SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.0f,0.0f,1.0f, 0.0,0.0//3
 };
 
+std::vector< glm::vec3 > cube_vertices;
+std::vector< glm::vec2 > cube_uvs;
+std::vector< glm::vec3 > cube_normals;
+
 std::vector< glm::vec3 > robot_vertices;
 std::vector< glm::vec2 > robot_uvs;
 std::vector< glm::vec3 > robot_normals;
 
-std::vector< glm::vec3 > cube_vertices;
-std::vector< glm::vec2 > cube_uvs;
-std::vector< glm::vec3 > cube_normals;
+std::vector< glm::vec3 > pyramid_vertices;
+std::vector< glm::vec2 > pyramid_uvs;
+std::vector< glm::vec3 > pyramid_normals;
 
 bool loadOBJ(
     const char* path,
@@ -395,6 +399,7 @@ bool loadOBJ(
 
 bool res_robot = loadOBJ("robot.obj", robot_vertices, robot_uvs, robot_normals);
 bool res_cube = loadOBJ("cube3.obj", cube_vertices, cube_uvs, cube_normals);
+bool res_pyramid = loadOBJ("pyramid.obj", pyramid_vertices, pyramid_uvs, pyramid_normals);
 
 // 카메라 벡터 선언
 glm::vec3 cameraPos = glm::vec3(player_xpos, player_ypos, player_zpos);
@@ -519,7 +524,7 @@ void Draw2ndCube(Shape shape) {
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
     STR *= S;
 
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y * 2, shape.pos.z));
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 2.0f, shape.pos.z));
     seccubeSTR = S * T;
     unsigned int transform2ndCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transform2ndCube, 1, GL_FALSE, glm::value_ptr(seccubeSTR));
@@ -543,10 +548,29 @@ void DrawEnemy() {
     unsigned int transformEnemy = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformEnemy, 1, GL_FALSE, glm::value_ptr(EnemySTR));
     unsigned int colorEnemy = glGetUniformLocation(s_program[1], "in_Color");
-    glUniform3f(colorEnemy, Yellow.r, Yellow.g, Yellow.b);
+    glUniform3f(colorEnemy, Green.r, Green.g, Green.b);
 
     glBindVertexArray(VAO[0]);
     glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
+}
+
+void DrawKey(Shape shape) {
+    glm::mat4 S = glm::mat4(1.0f);
+    glm::mat4 T = glm::mat4(1.0f);
+    glm::mat4 STR = glm::mat4(1.0f);
+
+    S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
+    STR *= S;
+
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y, shape.pos.z));
+    cubeSTR = S * T;
+    unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
+    unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
+    glUniform3f(colorCube, shape.color.x, shape.color.y, shape.color.z);
+
+    glBindVertexArray(VAO[2]);
+    glDrawArrays(GL_TRIANGLES, 0, pyramid_vertices.size());
 }
 
 void DrawBoard()
@@ -555,6 +579,8 @@ void DrawBoard()
     {
         for (int j = 0; j < SIZE; j++)
         {
+            printf("%d ", boardShape[i][j]);
+
             switch (boardShape[i][j].type) {
             case BOARD_TYPE::NONE:
                 break;
@@ -564,9 +590,11 @@ void DrawBoard()
                 Draw2ndCube(boardShape[i][j]);
                 break;
             case BOARD_TYPE::ITEM:
+                DrawKey(boardShape[i][j]);
                 break;
             }
         }
+        printf("\n");
     }
 }
 
@@ -825,23 +853,49 @@ int Loadfile(int mapCollect)
                 fscanf(fp, "%d", &cha);
 
                 boardShape[i][j].type = (BOARD_TYPE)cha;
-                if (i < SIZE / 2 && j < SIZE / 2) {
-                    boardShape[i][j].pos = Vector3(i * 2.5f - 15, 0, j * 2.5f - 15);
+
+
+                if (boardShape[i][j].type == ITEM) {
+                    boardShape[i][j].color = Vector3(Yellow.r, Yellow.g, Yellow.b);
+                    boardShape[i][j].scale = Vector3(0.5, 0.5, 0.5);
+
+                    if (i < SIZE / 2 && j < SIZE / 2) {
+                        boardShape[i][j].pos = Vector3((i * 3.5f - 15), 0, (j * 3.5f - 15));
+                    }
+                    else if (i < SIZE / 2 && j > SIZE / 2) {
+                        boardShape[i][j].pos = Vector3((i * 3.5f - 15), 0, j * 3.5f);
+                    }
+                    else if (i > SIZE / 2 && j < SIZE / 2) {
+                        boardShape[i][j].pos = Vector3(i * 3.5f, 0, (j * 3.5f - 15));
+                    }
+                    else if (i > SIZE / 2 && j > SIZE / 2) {
+                        boardShape[i][j].pos = Vector3(i * 3.5f, 0, j * 3.5f);
+                    }
                 }
-                else if (i < SIZE / 2 && j > SIZE / 2) {
-                    boardShape[i][j].pos = Vector3(i * 2.5f - 15, 0, j * 2.5f);
+                else {
+                    boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
+
+                    if (i < SIZE / 2 && j < SIZE / 2) {
+                        boardShape[i][j].pos = Vector3((i * 2.5f - 15), 0, (j * 2.5f - 15));
+                    }
+                    else if (i < SIZE / 2 && j > SIZE / 2) {
+                        boardShape[i][j].pos = Vector3((i * 2.5f - 15), 0, j * 2.5f);
+                    }
+                    else if (i > SIZE / 2 && j < SIZE / 2) {
+                        boardShape[i][j].pos = Vector3(i * 2.5f, 0, (j * 2.5f - 15));
+                    }
+                    else if (i > SIZE / 2 && j > SIZE / 2) {
+                        boardShape[i][j].pos = Vector3(i * 2.5f, 0, j * 2.5f);
+                    }
+
+                    if (boardShape[i][j].type == FIXED_WALL) {
+                        boardShape[i][j].color = Vector3(0.7, 0.7, 0.7);
+                    }
+                    else {
+                        boardShape[i][j].color = Vector3(0.3, 0.3, 0.3);
+                    }
                 }
-                else if (i > SIZE / 2 && j < SIZE / 2) {
-                    boardShape[i][j].pos = Vector3(i * 2.5f, 0, j * 2.5f - 15);
-                }
-                else if (i > SIZE / 2 && j > SIZE / 2) {
-                    boardShape[i][j].pos = Vector3(i * 2.5f, 0, j * 2.5f);
-                }
-                boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
-                if (boardShape[i][j].type == FIXED_WALL)
-                    boardShape[i][j].color = Vector3(0.7, 0.7, 0.7);
-                else
-                    boardShape[i][j].color = Vector3(0.3, 0.3, 0.3);
+
             }
         }
     }
@@ -958,6 +1012,18 @@ void InitBuffer()
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
     glBufferData(GL_ARRAY_BUFFER, robot_normals.size() * sizeof(glm::vec3), &robot_normals[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
+
+    // 로봇
+    glBindVertexArray(VAO[2]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[4]);
+    glBufferData(GL_ARRAY_BUFFER, pyramid_vertices.size() * sizeof(glm::vec3), &pyramid_vertices[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[5]);
+    glBufferData(GL_ARRAY_BUFFER, pyramid_normals.size() * sizeof(glm::vec3), &pyramid_normals[0], GL_STATIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
 
