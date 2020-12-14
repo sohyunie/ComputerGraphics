@@ -482,10 +482,10 @@ void get_bb(Shape shape) {
         glLineWidth(7);
         glBegin(GL_LINE_LOOP);
         {
-            glVertex3f(-1, 1.0, 1);
-            glVertex3f(-1, 1.0, -1);
-            glVertex3f(1, 1.0, -1);
-            glVertex3f(1, 1.0, 1);
+            glVertex3f(-1, -2, 1);
+            glVertex3f(-1, -2, -1);
+            glVertex3f(1, -2, -1);
+            glVertex3f(1, -2, 1);
         }
         glEnd();
         glLineWidth(1);
@@ -500,7 +500,7 @@ void DrawCube(Shape shape)
     glm::mat4 S = glm::mat4(1.0f);
     glm::mat4 T = glm::mat4(1.0f);
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y, shape.pos.z));
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 3 * shape.radius, shape.pos.z));
     cubeSTR = T * S;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
@@ -516,7 +516,7 @@ void Draw2ndCube(Shape shape) {
     glm::mat4 T = glm::mat4(1.0f);
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 2.0f, shape.pos.z));
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 9 * shape.radius, shape.pos.z));
     seccubeSTR = T * S;
     unsigned int transform2ndCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transform2ndCube, 1, GL_FALSE, glm::value_ptr(seccubeSTR));
@@ -908,22 +908,6 @@ int Loadfile(int mapCollect)
                     boardShape[i][j].color = Vector3(Yellow.r, Yellow.g, Yellow.b);
                     boardShape[i][j].scale = Vector3(1.0, 1.0, 1.0);
                     boardShape[i][j].radius = 1.0f;
-                    //if (i < SIZE / 2 && j < SIZE / 2) {
-                    //    boardShape[i][j].pos = Vector3((i * 15.0f - 25), 0, (j * 15.0f - 25));
-                    //    boardShape[i][j].bb = Vector4((i * 14.0f - 25), (j * 14.0f - 25), (i * 16.0f - 25), (j * 16.0f - 25));
-                    //}
-                    //else if (i < SIZE / 2 && j > SIZE / 2) {
-                    //    boardShape[i][j].pos = Vector3((i * 15.0f - 25), 0, j * 15.0f);
-                    //    boardShape[i][j].bb = Vector4((i * 14.0f - 25), (j * 14.0f), (i * 16.0f - 25), (j * 16.0f));
-                    //}
-                    //else if (i > SIZE / 2 && j < SIZE / 2) {
-                    //    boardShape[i][j].pos = Vector3(i * 15.0f, 0, (j * 15.0f - 25));
-                    //    boardShape[i][j].bb = Vector4((i * 14.0f), (j * 14.0f - 25), (i * 16.0f), (j * 16.0f - 25));
-                    //}
-                    //else if (i > SIZE / 2 && j > SIZE / 2) {
-                    //    boardShape[i][j].pos = Vector3(i * 15.0f, 0, j * 15.0f);
-                    //    boardShape[i][j].bb = Vector4((i * 14.0f), (j * 14.0f), (i * 16.0f), (j * 16.0f));
-                    //}
                 }
                 else {
                     boardShape[i][j].radius = 1.0f;
@@ -936,7 +920,6 @@ int Loadfile(int mapCollect)
                         boardShape[i][j].color = Vector3(0.3, 0.3, 0.3);
                     }
                 }
-
             }
             printf("\n");
         }
@@ -1067,69 +1050,6 @@ void InitBuffer()
     glBufferData(GL_ARRAY_BUFFER, pyramid_normals.size() * sizeof(glm::vec3), &pyramid_normals[0], GL_STATIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
-
-    // 	
-    /*glBindVertexArray(VAO[2]);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(RecF), RecF, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-
-    glBindVertexArray(VAO[3]);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(RecR), RecR, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-
-    glBindVertexArray(VAO[4]);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[4]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(RecL), RecL, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-
-    glBindVertexArray(VAO[5]);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[5]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(RecT), RecT, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-
-    glBindVertexArray(VAO[6]);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[6]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(RecD), RecD, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-
-    glBindVertexArray(VAO[7]);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[7]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(RecB), RecB, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);*/
 }
 
 void InitShader() {
