@@ -475,15 +475,22 @@ void DrawPlayer()
     glDrawArrays(GL_TRIANGLES, 0, robot_vertices.size());
 }
 
-void get_bb(Vector4 vec) {
-    glColor3f(1.0f, 0.0f, 0.0f);
-    glLineWidth(5.0f);
-    glBegin(GL_LINE_LOOP);
-    glVertex3f(vec.minx, 1.0, vec.maxz);
-    glVertex3f(vec.minx, 1.0, vec.minz);
-    glVertex3f(vec.maxx, 1.0, vec.minz);
-    glVertex3f(vec.maxx, 1.0, vec.maxz);
-    glEnd();
+void get_bb(Shape shape) {
+    glPushMatrix();
+    {
+        glTranslatef(shape.pos.x, 1, shape.pos.z);
+        glLineWidth(7);
+        glBegin(GL_LINE_LOOP);
+        {
+            glVertex3f(-1, 1.0, 1);
+            glVertex3f(-1, 1.0, -1);
+            glVertex3f(1, 1.0, -1);
+            glVertex3f(1, 1.0, 1);
+        }
+        glEnd();
+        glLineWidth(1);
+    }
+    glPopMatrix();
 }
 
 // 큐브 그리기 함수 -> 맵 그릴 때 사용
@@ -566,13 +573,10 @@ void DrawEnemy() {
 void DrawKey(Shape shape) {
     glm::mat4 S = glm::mat4(1.0f);
     glm::mat4 T = glm::mat4(1.0f);
-    glm::mat4 STR = glm::mat4(1.0f);
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
-    STR *= S;
-
     T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y, shape.pos.z));
-    cubeSTR = S * T;
+    cubeSTR = T * S;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -590,12 +594,12 @@ void DrawBoard()
         {
             //printf("%d ", boardShape[i][j]);
 
+            get_bb(boardShape[i][j]);
             switch (boardShape[i][j].type) {
             case BOARD_TYPE::NONE:
                 break;
             case BOARD_TYPE::WALL:
             case BOARD_TYPE::FIXED_WALL:
-                get_bb(boardShape[i][j].GetBB());
                 DrawCube(boardShape[i][j]);
                 Draw2ndCube(boardShape[i][j]);
                 break;
@@ -899,10 +903,10 @@ int Loadfile(int mapCollect)
 
                 printf("%d ", boardShape[i][j]);
 
+                boardShape[i][j].pos = Vector3((i * 7.5f - 35), 0, (j * 7.5f - 35));
                 if (boardShape[i][j].type == ITEM) {
                     boardShape[i][j].color = Vector3(Yellow.r, Yellow.g, Yellow.b);
                     boardShape[i][j].scale = Vector3(1.0, 1.0, 1.0);
-                    boardShape[i][j].pos = Vector3((i * 7.5f - 35), 0, (j * 7.5f - 35));
                     boardShape[i][j].radius = 1.0f;
                     //if (i < SIZE / 2 && j < SIZE / 2) {
                     //    boardShape[i][j].pos = Vector3((i * 15.0f - 25), 0, (j * 15.0f - 25));
@@ -922,7 +926,6 @@ int Loadfile(int mapCollect)
                     //}
                 }
                 else {
-                    boardShape[i][j].pos = Vector3((i * 7.5f - 35), 0, (j * 7.5f - 35));
                     boardShape[i][j].radius = 1.0f;
                     boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
 
