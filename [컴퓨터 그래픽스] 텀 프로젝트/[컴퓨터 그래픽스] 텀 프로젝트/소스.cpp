@@ -90,8 +90,11 @@ struct Shape {
     Vector3 color;
     Vector3 scale;
     Vector3 pos;
-    Vector4 bb;
     Vector3 dir;
+
+    Vector4 GetBB() {
+        return Vector4(pos.x - 1.5, pos.z - 1.5, pos.x + 1.5, pos.z + 1.5);
+    }
 
     Shape() {
         return;
@@ -486,15 +489,12 @@ void get_bb(Vector4 vec) {
 // 큐브 그리기 함수 -> 맵 그릴 때 사용
 void DrawCube(Shape shape)
 {
+    get_bb(shape.GetBB());
     glm::mat4 S = glm::mat4(1.0f);
     glm::mat4 T = glm::mat4(1.0f);
-    glm::mat4 STR = glm::mat4(1.0f);
-
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
-    STR *= S;
-
     T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y, shape.pos.z));
-    cubeSTR = S * T;
+    cubeSTR = T * S;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -502,19 +502,15 @@ void DrawCube(Shape shape)
 
     glBindVertexArray(VAO[0]);
     glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
-    get_bb(shape.bb);
 }
 
 void Draw2ndCube(Shape shape) {
     glm::mat4 S = glm::mat4(1.0f);
     glm::mat4 T = glm::mat4(1.0f);
-    glm::mat4 STR = glm::mat4(1.0f);
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
-    STR *= S;
-
     T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 2.0f, shape.pos.z));
-    seccubeSTR = S * T;
+    seccubeSTR = T * S;
     unsigned int transform2ndCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transform2ndCube, 1, GL_FALSE, glm::value_ptr(seccubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -904,9 +900,8 @@ int Loadfile(int mapCollect)
 
                 if (boardShape[i][j].type == ITEM) {
                     boardShape[i][j].color = Vector3(Yellow.r, Yellow.g, Yellow.b);
-                    boardShape[i][j].scale = Vector3(0.5, 0.5, 0.5);
-                    boardShape[i][j].pos = Vector3((i * 15.0f - 35), 0, (j * 15.0f - 35));
-                    boardShape[i][j].bb = Vector4(boardShape[i][j].pos.x - 1, boardShape[i][j].pos.z - 1, boardShape[i][j].pos.x + 1, boardShape[i][j].pos.z + 1);
+                    boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
+                    boardShape[i][j].pos = Vector3((i * 6.5f - 35), 0, (j * 6.5f - 35));
                     //if (i < SIZE / 2 && j < SIZE / 2) {
                     //    boardShape[i][j].pos = Vector3((i * 15.0f - 25), 0, (j * 15.0f - 25));
                     //    boardShape[i][j].bb = Vector4((i * 14.0f - 25), (j * 14.0f - 25), (i * 16.0f - 25), (j * 16.0f - 25));
@@ -926,8 +921,7 @@ int Loadfile(int mapCollect)
                 }
                 else {
                     boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
-                    boardShape[i][j].pos = Vector3((i * 2.5f - 35), 0, (j * 2.5f - 35));
-                    boardShape[i][j].bb = Vector4(boardShape[i][j].pos.x - 1, boardShape[i][j].pos.z - 1, boardShape[i][j].pos.x + 1, boardShape[i][j].pos.z + 1);
+                    boardShape[i][j].pos = Vector3((i * 6.5f - 35), 0, (j * 6.5f - 35));
 
                     if (boardShape[i][j].type == FIXED_WALL) {
                         boardShape[i][j].color = Vector3(0.7, 0.7, 0.7);
