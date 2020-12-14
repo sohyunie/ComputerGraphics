@@ -482,10 +482,10 @@ void get_bb(Shape shape) {
         glLineWidth(7);
         glBegin(GL_LINE_LOOP);
         {
-            glVertex3f(-1, -2, 1);
-            glVertex3f(-1, -2, -1);
-            glVertex3f(1, -2, -1);
-            glVertex3f(1, -2, 1);
+            glVertex3f(-shape.radius, -2, shape.radius);
+            glVertex3f(-shape.radius, -2, -shape.radius);
+            glVertex3f(shape.radius, -2, -shape.radius);
+            glVertex3f(shape.radius, -2, shape.radius);
         }
         glEnd();
         glLineWidth(1);
@@ -500,8 +500,8 @@ void DrawCube(Shape shape)
     glm::mat4 S = glm::mat4(1.0f);
     glm::mat4 T = glm::mat4(1.0f);
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 3 * shape.radius, shape.pos.z));
-    cubeSTR = T * S;
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y, shape.pos.z));
+    cubeSTR = S * T;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -516,8 +516,8 @@ void Draw2ndCube(Shape shape) {
     glm::mat4 T = glm::mat4(1.0f);
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 9 * shape.radius, shape.pos.z));
-    seccubeSTR = T * S;
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 2 * shape.radius, shape.pos.z));
+    seccubeSTR = S * T;
     unsigned int transform2ndCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transform2ndCube, 1, GL_FALSE, glm::value_ptr(seccubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
