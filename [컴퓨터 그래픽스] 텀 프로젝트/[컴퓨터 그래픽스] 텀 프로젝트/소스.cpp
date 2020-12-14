@@ -128,6 +128,8 @@ void Draw2ndCube();
 void DrawEnemy();
 void DrawKey();
 void InitMonster();
+float get_time();
+float currentTime();
 
 void SpecialKeyboard(int key, int x, int y); //키보드 조종
 void Keyboard(unsigned char Key, int x, int y); // 키보드 조종2
@@ -527,28 +529,15 @@ void Draw2ndCube(Shape shape) {
     glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
 }
 
-void letter_Play()
+void PrintUI()
 {
-    glColor3f(1, 1, 1);
-    const char* string = "ITEM	:";
-    glRasterPos2f(-80, -80);  // 문자 출력할 위치 설정  
+    glColor3f(1.0f, 1.0f, 1.0f);
+    string text = "TIME : " + to_string(currentTime()).substr(0, 4);
+    const char* string = text.data();
+    glRasterPos2f(-0.9, 0.9);  // 문자 출력할 위치 설정  
     int len = (int)strlen(string);
     for (int i = 0; i < len; i++)
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
-
-    glColor3f(1, 1, 1);
-    const char* string_1 = "HP	:";
-    glRasterPos2f(-80, -60);  // 문자 출력할 위치 설정  
-    int len_1 = (int)strlen(string);
-    for (int i = 0; i < len; i++)
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string_1[i]);
-
-    glColor3f(1, 1, 1);
-    const char* string_2 = "SCORE	:";
-    glRasterPos2f(-80, -40);  // 문자 출력할 위치 설정  
-    int len_2 = (int)strlen(string);
-    for (int i = 0; i < len; i++)
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string_2[i]);
 }
 
 void DrawEnemy() {
@@ -654,6 +643,7 @@ void drawScene()
 {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    PrintUI();
 
     glUseProgram(s_program[0]);
     glUseProgram(s_program[1]);
@@ -694,7 +684,6 @@ void drawScene()
         // throw_bomb = false;
         // 적 구현 이후에 timer함수에서 움직이는거 구현
     }
-    letter_Play();
 
     glutPostRedisplay();
     glutSwapBuffers();
@@ -826,10 +815,17 @@ void TimerFunction(int value) {
 }
 
 // 잔여 HP 표현하는 delta_time 얻는 함수
-void get_time() {
+float get_time() 
+{
     float currentFrame = glutGet(GLUT_ELAPSED_TIME);
     delta_time = currentFrame - lastFrame;
     lastFrame = currentFrame;
+
+    return lastFrame;
+}
+
+float currentTime() {
+    return round(get_time() / 100) / 10;
 }
 
 // 폭탄
