@@ -34,8 +34,12 @@
 
 #define SHAPE_SIZE 0.5f // Enemy size
 
+<<<<<<< HEAD
+#define SIZE 31 // 맵 사이즈
+=======
 #define SIZE 22 // 맵 사이즈
 #define MONSTER_SIZE 10
+>>>>>>> fdaac906f52e8986ddba58df21a116ed9e25f24b
 using namespace std;
 
 normal_distribution <float>uid_mColor{ 0.0,1.0 };
@@ -61,6 +65,23 @@ struct Vector3 {
     }
 };
 
+struct Vector4 {
+    float minx;
+    float minz;
+    float maxx;
+    float maxz;
+
+    Vector4() {}
+
+    Vector4(float x, float y, float z, float w) {
+        this->minx = x;
+        this->minz = y;
+        this->maxx = z;
+        this->maxz = w;
+    }
+};
+
+
 enum BOARD_TYPE {
     NONE = 0,
     WALL = 1,
@@ -73,7 +94,11 @@ struct Shape {
     Vector3 color;
     Vector3 scale;
     Vector3 pos;
+<<<<<<< HEAD
+    Vector4 bb;
+=======
     Vector3 dir;
+>>>>>>> fdaac906f52e8986ddba58df21a116ed9e25f24b
 
     Shape() {
         return;
@@ -132,7 +157,7 @@ BITMAPINFO* info; // 비트맵 헤더 저장할 변수
 GLuint textures[1];
 void initTextures();
 
-int mapCollect = rand() % 4;
+int mapCollect = 0;
 float colorbuffer[4][3] = { 0 };
 
 Shape boardShape[SIZE][SIZE];
@@ -265,75 +290,6 @@ float Background[] = {
     -1.0,-1.0,-1.0, 0.0,1.0,0.0, 1.0,0.0,
     1.0,-1.0,-1.0, 0.0,1.0,0.0, 0.0,0.0,
     1.0,1.0,-1.0, 0.0,1.0,0.0, 0.0,1.0
-};
-
-float RecF[] = {
-
-    //앞
-    -SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.0f,1.0f,0.0f,  0.0,1.0,//6
-    -SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.0f,0.0f,0.5f, 0.0,0.0,//8
-     SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.5f,  1.0,1.0,//5
-
-     SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.5f,  1.0,1.0,//5
-     -SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.0f,0.0f,0.5f, 0.0,0.0,//8
-      SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.0f,  1.0,0.0//7
-};
-
-float RecR[] = {
-    //오
-     SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 1.0f,0.0f,0.0f, 1.0,1.0,//5
-     SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 1.0f,0.0f,0.0f, 0.0,0.0,//3
-    SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.5f, 0.0,1.0,//1
-
-
-     SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.5f,  1.0,1.0,//5
-     SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.0f, 1.0,0.0,//7
-    SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 1.0f,0.0f,1.0f, 0.0,0.0//3
-};
-float RecL[] = {
-    //왼
-    -SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.0f,1.0f,0.0f, 0.0,1.0,//6
-    -SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.0f,1.0f,0.0f, 1.0,1.0,//2
-    -SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.0f,0.0f,0.5f, 0.0,0.0,//8
-
-     -SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.0f,1.0f,0.0f, 1.0,1.0,//2
-     -SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.0f,0.25f,0.25f,1.0,0.0,//4
-      -SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.0f,0.0f,0.5f, 0.0,0.0//8
-};
-
-float RecT[] = {
-
-    //위
-     -SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.0f,1.0f,0.0f,  1.0,0.0,//6
-     SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.5f, 0.0,0.0,//5
-      SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.5f, 0.0,1.0,//1
-
-
-      -SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.0f,1.0f,0.0f, 1.0,0.0,//6
-      SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.5f, 0.0,1.0,//1
-      -SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.0f,1.0f,1.0f, 1.0,1.0//2
-};
-
-float RecD[] = {
-    //아래
--SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.0f,0.0f,0.5f, 0.0,1.0,//8
-SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.0f,  1.0,0.0,//3
-SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.0f,   1.0,1.0,//7
-
- -SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.0f,0.0f,0.5f, 0.0,1.0,//8
-  -SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.0f,0.25f,0.25f, 0.0,0.0,//4
-  SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.25f, 1.0,0.0//3
-};
-
-float RecB[] = {
-    //뒤
--SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.0f,1.0f,1.0f, 1.0,1.0,//2
-SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.0f, 0.0,0.0,//3
--SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.25f, 1.0,0.0,//4
-
- -SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.0f,1.0f,1.0f, 1.0,1.0,//2
- SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 1.0f,0.0f,0.0f, 0.0,1.0,//1
- SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.0f,0.0f,1.0f, 0.0,0.0//3
 };
 
 std::vector< glm::vec3 > cube_vertices;
@@ -493,6 +449,10 @@ void main(int argc, char** argv) {
 
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
+<<<<<<< HEAD
+    //glutMouseFunc(Mouse);
+=======
+>>>>>>> fdaac906f52e8986ddba58df21a116ed9e25f24b
     glutKeyboardFunc(Keyboard);
     glutSpecialFunc(SpecialKeyboard);
     glutSpecialUpFunc(releaseKey);
@@ -523,6 +483,17 @@ void DrawPlayer()
     glDrawArrays(GL_TRIANGLES, 0, robot_vertices.size());
 }
 
+void get_bb(Vector4 vec) {
+    glColor3f(1.0f, 0.0f, 0.0f);
+    glLineWidth(5.0f);
+    glBegin(GL_LINE_LOOP);
+    glVertex3f(vec.minx, -1.0, vec.minz);
+    glVertex3f(vec.maxx, -1.0, vec.maxz);
+    glVertex3f(vec.maxx, 3.0, vec.maxz);
+    glVertex3f(vec.minx, 3.0, vec.minz);
+    glEnd();
+}
+
 // 큐브 그리기 함수 -> 맵 그릴 때 사용
 void DrawCube(Shape shape)
 {
@@ -542,6 +513,7 @@ void DrawCube(Shape shape)
 
     glBindVertexArray(VAO[0]);
     glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
+    get_bb(shape.bb);
 }
 
 void Draw2ndCube(Shape shape) {
@@ -702,20 +674,23 @@ void drawScene()
 
     if (deltaAngle)
         computeDir(deltaAngle);
-    
-    if(deltaMove)
+
+    if (deltaMove)
         computePos(deltaMove);
 
     Vector3 dir = Vector3();
     float yPos = 5.0f;
-    cout << isFPS << endl;
     if (!isFPS)
         dir = Vector3(player_xpos + lx * 100, player_ypos + ly, player_zpos + lz * 100);
     else {
         dir = Vector3(player_xpos + lx, player_ypos + ly, player_zpos + lz);
         yPos *= 20;
     }
+<<<<<<< HEAD
+
+=======
  
+>>>>>>> fdaac906f52e8986ddba58df21a116ed9e25f24b
     CameraSetting(s_program[0], Vector3(player_xpos, player_ypos, player_zpos), dir, yPos);
     DrawBoard();
     DrawPlayer();
@@ -761,47 +736,40 @@ void releaseKey(int key, int x, int y) {
 
 void Keyboard(unsigned char key, int x, int y) {
     switch (key) {
-    //case'w':
-    //    //if (!threed_mode) {
-    //    //    cameraPos += cameraSpeed * cameraFront;
-    //    //}
-    //    x -= 1.0f;
-    //    player_zpos -= 1.0f;
-    //    cameraDir = Vector3(0, 0, -1);
-    //    break;
-    //case 'a':
-    //    //if (!threed_mode) {
-    //    //    cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    //    //}
-    //    player_xpos -= 1.0f;
-    //    cameraDir = Vector3(-1, 0, 0);
-    //    break;
-    //case 's':
-    //    //if (!threed_mode) {
-    //    //    cameraPos -= cameraFront * cameraSpeed;
-    //    //}
-    //    player_zpos += 1.0f;
-    //    cameraDir = Vector3(0, 0, 1);
-    //    break;
-    //case 'd':
-    //    //if (!threed_mode) {
-    //    //    cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    //    //}
-    //    player_xpos += 1.0f;
-    //    cameraDir = Vector3(1, 0, 0);
-    //    break;
+        //case'w':
+        //    //if (!threed_mode) {
+        //    //    cameraPos += cameraSpeed * cameraFront;
+        //    //}
+        //    x -= 1.0f;
+        //    player_zpos -= 1.0f;
+        //    cameraDir = Vector3(0, 0, -1);
+        //    break;
+        //case 'a':
+        //    //if (!threed_mode) {
+        //    //    cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        //    //}
+        //    player_xpos -= 1.0f;
+        //    cameraDir = Vector3(-1, 0, 0);
+        //    break;
+        //case 's':
+        //    //if (!threed_mode) {
+        //    //    cameraPos -= cameraFront * cameraSpeed;
+        //    //}
+        //    player_zpos += 1.0f;
+        //    cameraDir = Vector3(0, 0, 1);
+        //    break;
+        //case 'd':
+        //    //if (!threed_mode) {
+        //    //    cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        //    //}
+        //    player_xpos += 1.0f;
+        //    cameraDir = Vector3(1, 0, 0);
+        //    break;
     case '1':
-        isFPS = true;
-        break;
-    case '3':
         isFPS = false;
         break;
-    case 'c':
-    case 'C':
-        if (threed_mode == false)
-            threed_mode = true;
-        else
-            threed_mode = false;
+    case '3':
+        isFPS = true;
         break;
     case 'b':
         // 일단 보이는것만.. b로 구현함 ㅠㅠ
@@ -900,10 +868,6 @@ void throw_bomb() {
     gluSphere(qobj, 0.5, 20, 20);
 }
 
-void get_bb() {
-
-}
-
 ////////////////////////////////////////////////////////////////////////
 // 맵을 txt 파일에서 읽어온다
 int Loadfile(int mapCollect)
@@ -952,39 +916,34 @@ int Loadfile(int mapCollect)
 
                 boardShape[i][j].type = (BOARD_TYPE)cha;
 
+                printf("%d ", boardShape[i][j]);
 
                 if (boardShape[i][j].type == ITEM) {
                     boardShape[i][j].color = Vector3(Yellow.r, Yellow.g, Yellow.b);
                     boardShape[i][j].scale = Vector3(0.5, 0.5, 0.5);
-
-                    if (i < SIZE / 2 && j < SIZE / 2) {
-                        boardShape[i][j].pos = Vector3((i * 3.5f - 15), 0, (j * 3.5f - 15));
-                    }
-                    else if (i < SIZE / 2 && j > SIZE / 2) {
-                        boardShape[i][j].pos = Vector3((i * 3.5f - 15), 0, j * 3.5f);
-                    }
-                    else if (i > SIZE / 2 && j < SIZE / 2) {
-                        boardShape[i][j].pos = Vector3(i * 3.5f, 0, (j * 3.5f - 15));
-                    }
-                    else if (i > SIZE / 2 && j > SIZE / 2) {
-                        boardShape[i][j].pos = Vector3(i * 3.5f, 0, j * 3.5f);
-                    }
+                    boardShape[i][j].pos = Vector3((i * 15.0f - 35), 0, (j * 15.0f - 35));
+                    boardShape[i][j].bb = Vector4(boardShape[i][j].pos.x - 1, boardShape[i][j].pos.z - 1, boardShape[i][j].pos.x + 1, boardShape[i][j].pos.z + 1);
+                    //if (i < SIZE / 2 && j < SIZE / 2) {
+                    //    boardShape[i][j].pos = Vector3((i * 15.0f - 25), 0, (j * 15.0f - 25));
+                    //    boardShape[i][j].bb = Vector4((i * 14.0f - 25), (j * 14.0f - 25), (i * 16.0f - 25), (j * 16.0f - 25));
+                    //}
+                    //else if (i < SIZE / 2 && j > SIZE / 2) {
+                    //    boardShape[i][j].pos = Vector3((i * 15.0f - 25), 0, j * 15.0f);
+                    //    boardShape[i][j].bb = Vector4((i * 14.0f - 25), (j * 14.0f), (i * 16.0f - 25), (j * 16.0f));
+                    //}
+                    //else if (i > SIZE / 2 && j < SIZE / 2) {
+                    //    boardShape[i][j].pos = Vector3(i * 15.0f, 0, (j * 15.0f - 25));
+                    //    boardShape[i][j].bb = Vector4((i * 14.0f), (j * 14.0f - 25), (i * 16.0f), (j * 16.0f - 25));
+                    //}
+                    //else if (i > SIZE / 2 && j > SIZE / 2) {
+                    //    boardShape[i][j].pos = Vector3(i * 15.0f, 0, j * 15.0f);
+                    //    boardShape[i][j].bb = Vector4((i * 14.0f), (j * 14.0f), (i * 16.0f), (j * 16.0f));
+                    //}
                 }
                 else {
                     boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
-
-                    if (i < SIZE / 2 && j < SIZE / 2) {
-                        boardShape[i][j].pos = Vector3((i * 2.5f - 15), 0, (j * 2.5f - 15));
-                    }
-                    else if (i < SIZE / 2 && j > SIZE / 2) {
-                        boardShape[i][j].pos = Vector3((i * 2.5f - 15), 0, j * 2.5f);
-                    }
-                    else if (i > SIZE / 2 && j < SIZE / 2) {
-                        boardShape[i][j].pos = Vector3(i * 2.5f, 0, (j * 2.5f - 15));
-                    }
-                    else if (i > SIZE / 2 && j > SIZE / 2) {
-                        boardShape[i][j].pos = Vector3(i * 2.5f, 0, j * 2.5f);
-                    }
+                    boardShape[i][j].pos = Vector3((i * 2.5f - 35), 0, (j * 2.5f - 35));
+                    boardShape[i][j].bb = Vector4(boardShape[i][j].pos.x - 1, boardShape[i][j].pos.z - 1, boardShape[i][j].pos.x + 1, boardShape[i][j].pos.z + 1);
 
                     if (boardShape[i][j].type == FIXED_WALL) {
                         boardShape[i][j].color = Vector3(0.7, 0.7, 0.7);
@@ -995,6 +954,7 @@ int Loadfile(int mapCollect)
                 }
 
             }
+            printf("\n");
         }
     }
 
