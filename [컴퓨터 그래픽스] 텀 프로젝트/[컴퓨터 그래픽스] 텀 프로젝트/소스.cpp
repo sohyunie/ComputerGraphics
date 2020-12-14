@@ -1,5 +1,3 @@
-#define STB_IMAGE_IMPLEMENTATION
-#include"stb_image.h"
 #include "ReadObj.h"
 
 #pragma warning(disable:4996)
@@ -40,8 +38,7 @@ using namespace std;
 
 normal_distribution <float>uid_mColor{ 0.0,1.0 };
 normal_distribution <float>uid_mDir{ -1.0 ,1.0 };
-normal_distribution <float>uid_mPos{ -10.0 ,10.0 };
-
+normal_distribution <float>uid_mPos{ -20, 20 };
 
 default_random_engine dre((size_t)time(NULL));
 
@@ -130,6 +127,8 @@ void DrawKey();
 void InitMonster();
 float get_time();
 float currentTime();
+bool collision(Shape, float, float);
+bool ccollision(Shape, Shape);
 
 void SpecialKeyboard(int key, int x, int y); //키보드 조종
 void Keyboard(unsigned char Key, int x, int y); // 키보드 조종2
@@ -436,12 +435,10 @@ void main(int argc, char** argv) {
     cout << "GLEW Initialized\n";
     glewInit();
 
-
     Loadfile(1);
     InitMonster();
     InitBuffer();
     InitShader();
-    InitTexture();
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -541,11 +538,6 @@ void PrintUI()
 }
 
 void DrawEnemy() {
-    //glBindVertexArray(vao[1]);
-    //glActiveTexture(GL_TEXTURE0);
-    //glBindTexture(GL_TEXTURE_2D, texture[0]);
-    //glDrawArrays(GL_TRIANGLES, 0, 6);
-
     glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(1.5, 1.5, 1.5));
     glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3(enemy_xpos, enemy_ypos, enemy_zpos));
     EnemySTR = S * T;
@@ -565,7 +557,7 @@ void DrawKey(Shape shape) {
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
     T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y, shape.pos.z));
-    cubeSTR = T * S;
+    cubeSTR = S * T;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -573,6 +565,8 @@ void DrawKey(Shape shape) {
 
     glBindVertexArray(VAO[2]);
     glDrawArrays(GL_TRIANGLES, 0, pyramid_vertices.size());
+
+    CalculateLight(shape.pos.x, shape.pos.y, shape.pos.z, 1.0);
 }
 
 void DrawBoard()
@@ -581,8 +575,6 @@ void DrawBoard()
     {
         for (int j = 0; j < SIZE; j++)
         {
-            //printf("%d ", boardShape[i][j]);
-
             get_bb(boardShape[i][j]);
             switch (boardShape[i][j].type) {
             case BOARD_TYPE::NONE:
@@ -591,13 +583,14 @@ void DrawBoard()
             case BOARD_TYPE::FIXED_WALL:
                 DrawCube(boardShape[i][j]);
                 Draw2ndCube(boardShape[i][j]);
+                if (collision(boardShape[i][j], player_xpos, player_zpos))
+                    printf("충돌이라고오오오ㅗㅇ\n");
                 break;
             case BOARD_TYPE::ITEM:
                 DrawKey(boardShape[i][j]);
                 break;
             }
         }
-        //printf("\n");
     }
 }
 
@@ -635,6 +628,7 @@ void InitMonster() {
         monster[i].pos = Vector3(uid_mPos(dre), 1.0f, uid_mPos(dre));
         monster[i].color = Vector3(uid_mColor(dre), uid_mColor(dre), uid_mColor(dre));
         monster[i].dir = Vector3(uid_mDir(dre), 0.0f, uid_mDir(dre));
+        monster[i].radius = 1.0f;
     }
 }
 
@@ -669,20 +663,19 @@ void drawScene()
     CameraSetting(s_program[0], Vector3(player_xpos, player_ypos, player_zpos), dir, yPos);
     DrawBoard();
     DrawPlayer();
-
-    for (int i = 0; i < MONSTER_SIZE; i++) {
-        DrawMonster(monster[i]);
-    }
-
-    //if (enemy_valid) {
-    //    DrawEnemy();
-    //}
-
+    
     // 폭탄
     if (bomb_mode) {
         throw_bomb();
         // throw_bomb = false;
         // 적 구현 이후에 timer함수에서 움직이는거 구현
+    }
+
+    for (int i = 0; i < MONSTER_SIZE; i++) {
+        DrawMonster(monster[i]);
+        get_bb(monster[i]);
+        if (ccollision(monster[i], bombShape))
+            printf("제발좀\n");
     }
 
     glutPostRedisplay();
@@ -710,35 +703,6 @@ void releaseKey(int key, int x, int y) {
 
 void Keyboard(unsigned char key, int x, int y) {
     switch (key) {
-        //case'w':
-        //    //if (!threed_mode) {
-        //    //    cameraPos += cameraSpeed * cameraFront;
-        //    //}
-        //    x -= 1.0f;
-        //    player_zpos -= 1.0f;
-        //    cameraDir = Vector3(0, 0, -1);
-        //    break;
-        //case 'a':
-        //    //if (!threed_mode) {
-        //    //    cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        //    //}
-        //    player_xpos -= 1.0f;
-        //    cameraDir = Vector3(-1, 0, 0);
-        //    break;
-        //case 's':
-        //    //if (!threed_mode) {
-        //    //    cameraPos -= cameraFront * cameraSpeed;
-        //    //}
-        //    player_zpos += 1.0f;
-        //    cameraDir = Vector3(0, 0, 1);
-        //    break;
-        //case 'd':
-        //    //if (!threed_mode) {
-        //    //    cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        //    //}
-        //    player_xpos += 1.0f;
-        //    cameraDir = Vector3(1, 0, 0);
-        //    break;
     case '1':
         isFPS = false;
         break;
@@ -801,16 +765,6 @@ void TimerFunction(int value) {
         monster[i].pos.z += 0.01 * monster[i].dir.z;
     }
 
-    //if (enemy_valid) {
-    //    // 임시 충돌체크
-    //    if (enemy_zpos <= (player_zpos - 5.0)) {
-    //        enemy_zpos += 0.5f;
-    //    }
-    //    else {
-    //        enemy_zpos = -30.0f;
-    //        enemy_valid = false;
-    //    }
-    //}
     glutTimerFunc(10, TimerFunction, 1);
 }
 
@@ -829,17 +783,14 @@ float currentTime() {
 }
 
 // 폭탄
-
-
-// 폭탄
 void throw_bomb() {
     qobj = gluNewQuadric();
     glm::vec3 bomb_pos = glm::vec3(bombShape.pos.x, bombShape.pos.y, bombShape.pos.z);
     S = glm::scale(glm::mat4(1.0f), glm::vec3(1.0, 1.0, 1.0));
     T = glm::translate(glm::mat4(1.0f), bomb_pos);
     Bomb_STR = S * T;
-    unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
-    glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(Bomb_STR));
+    unsigned int Bomb = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(Bomb, 1, GL_FALSE, glm::value_ptr(Bomb_STR));
 
     unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
     glUniform3f(Color_Bomb, Red.r, Red.g, Red.b);
@@ -897,13 +848,12 @@ int Loadfile(int mapCollect)
 
                 boardShape[i][j].type = (BOARD_TYPE)cha;
 
-                printf("%d ", boardShape[i][j]);
-
                 boardShape[i][j].pos = Vector3((i * 7.5f - 35), 0, (j * 7.5f - 35));
+
                 if (boardShape[i][j].type == ITEM) {
                     boardShape[i][j].color = Vector3(Yellow.r, Yellow.g, Yellow.b);
                     boardShape[i][j].scale = Vector3(1.0, 1.0, 1.0);
-                    boardShape[i][j].radius = 1.0f;
+                    boardShape[i][j].radius = 3.0f;
                 }
                 else {
                     boardShape[i][j].radius = 1.0f;
@@ -917,7 +867,6 @@ int Loadfile(int mapCollect)
                     }
                 }
             }
-            printf("\n");
         }
     }
 
@@ -925,7 +874,6 @@ int Loadfile(int mapCollect)
 
     return 1;
 }
-
 
 float obj_rot = 0;
 
@@ -1065,94 +1013,6 @@ void InitShader() {
     }
 }
 
-void InitTexture()
-{
-    int width[10], height[10], nrChannels[10];
-    stbi_set_flip_vertically_on_load(true);
-    //BITMAPINFO* bmp;
-    //--- texture 1
-    glGenTextures(1, &texture[0]);
-    glBindTexture(GL_TEXTURE_2D, texture[0]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    unsigned char* data1 = stbi_load("1.bmp", &width[0], &height[0], &nrChannels[0], 0);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width[0], height[0], 0, GL_RGB, GL_UNSIGNED_BYTE, data1);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    //glUseProgram(s_program);
-    //int tLocation1 = glGetUniformLocation(s_program, "exTexture");
-    //glUniform1i(tLocation1, 0);
-    stbi_image_free(data1);
-
-
-    //--- texture 2
-    glGenTextures(1, &texture[1]);
-    glBindTexture(GL_TEXTURE_2D, texture[1]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    stbi_set_flip_vertically_on_load(true);
-    unsigned char* data2 = stbi_load("2.bmp", &width[1], &height[1], &nrChannels[1], 0);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[1], height[1], 0, GL_RGB, GL_UNSIGNED_BYTE, data2);
-    stbi_image_free(data2);
-
-    //--- texture 3
-    glGenTextures(1, &texture[2]);
-    glBindTexture(GL_TEXTURE_2D, texture[2]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    stbi_set_flip_vertically_on_load(true);
-    unsigned char* data3 = stbi_load("3.bmp", &width[2], &height[2], &nrChannels[2], 0);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[2], height[2], 0, GL_RGB, GL_UNSIGNED_BYTE, data3);
-    stbi_image_free(data3);
-    //--- texture 3
-    //
-    glGenTextures(1, &texture[3]);
-    glBindTexture(GL_TEXTURE_2D, texture[3]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    stbi_set_flip_vertically_on_load(true);
-    unsigned char* data4 = stbi_load("4.bmp", &width[3], &height[3], &nrChannels[3], 0);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[3], height[3], 0, GL_RGB, GL_UNSIGNED_BYTE, data4);
-    stbi_image_free(data4);
-
-    glGenTextures(1, &texture[4]);
-    glBindTexture(GL_TEXTURE_2D, texture[4]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //stbi_set_flip_vertically_on_load(true);
-    unsigned char* data5 = stbi_load("5.bmp", &width[4], &height[4], &nrChannels[4], 0);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[4], height[4], 0, GL_RGB, GL_UNSIGNED_BYTE, data5);
-    stbi_image_free(data5);
-
-
-    glGenTextures(1, &texture[5]);
-    glBindTexture(GL_TEXTURE_2D, texture[5]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //stbi_set_flip_vertically_on_load(true);
-    unsigned char* data6 = stbi_load("6.bmp", &width[5], &height[5], &nrChannels[5], 0);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[5], height[5], 0, GL_RGB, GL_UNSIGNED_BYTE, data6);
-    stbi_image_free(data6);
-}
-
 // 조명 계산
 void CalculateLight(float lgt_x, float lgt_y, float lgt_z, float amb) {
     unsigned int light_pos = glGetUniformLocation(s_program[0], "lightPos");
@@ -1183,4 +1043,48 @@ void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir, 
 
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
+}
+
+bool collision(Shape shape, float x, float z) {
+    Vector4 bbox = shape.GetBB();
+    bool xcollision = false;
+    bool zcollision = false;
+
+    if ((bbox.minx > (x + 1.0)) && (bbox.maxx < (x - 1.0))) {
+        printf("xcollision\n");
+        xcollision = true;
+    }
+    if ((bbox.maxz > (z + 1.0)) && (bbox.minz < (z - 1.0)))
+        zcollision = true;
+
+
+    if (xcollision && zcollision) {
+        printf("충돌\n");
+        return true;
+    }
+    else
+        return false;
+}
+
+bool ccollision(Shape shape, Shape bomb) {
+    Vector4 sbox = shape.GetBB();
+    Vector4 bbox = bomb.GetBB();
+
+    bool xcollision = false;
+    bool zcollision = false;
+
+    if ((bbox.minx > (sbox.minx)) && (bbox.maxx < (sbox.minx))) {
+        printf("xcollision\n");
+        xcollision = true;
+    }
+    if ((bbox.maxz > sbox.minx) && (bbox.minz < sbox.minx))
+        zcollision = true;
+
+
+    if (xcollision && zcollision) {
+        printf("충돌\n");
+        return true;
+    }
+    else
+        return false;
 }
