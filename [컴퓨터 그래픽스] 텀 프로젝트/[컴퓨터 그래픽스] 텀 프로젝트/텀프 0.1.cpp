@@ -335,9 +335,9 @@ void main(int argc, char** argv) {
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
-    glutInitWindowPosition(100, 100);
+    glutInitWindowPosition(500, 100);
     glutInitWindowSize(800, 600);
-    glutCreateWindow("Example18");
+    glutCreateWindow("GAME NAME");
 
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
@@ -556,7 +556,7 @@ void get_time() {
     HP -= lastFrame;
     /*printf("deltatime : %f\n", delta_time);*/
     if (HP % 100 == 0) {
-        printf("HP : %d \n", HP);
+        // printf("HP : %d \n", HP);
     }
 }
 
@@ -633,12 +633,12 @@ int Loadfile()
 
     if (fp == NULL)
     {
-        printf("\n실패\n");
+        printf("\nLoad file 실패\n");
         printf("errno = %s\n", strerror(errno));
         return 1;
     }
 
-    printf("\n완료\n");
+    printf("\nLoad file 완료\n");
 
     int cha;
 
@@ -783,6 +783,7 @@ void board_maker()
         {
             if (makeboard[i][j] == 1)
             {
+                printf("board_maker [][] == 1 접근!\n");
                 glPushMatrix();
                 {
                     glTranslatef(i * 1.1 - 15, 0, j * 1.1 - 15);
