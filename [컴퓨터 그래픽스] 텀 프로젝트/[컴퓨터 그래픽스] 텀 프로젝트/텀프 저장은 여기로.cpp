@@ -49,7 +49,7 @@ void drawScene();
 void TimerFunction(int);
 void Keyboard(unsigned char, int, int);
 void Mouse(int, int, int, int);
-void CalculateLight(float, float, float, float, float, float, float);
+void CalculateLight(float, float, float, float);
 int Loadfile(int mapCollect);
 void DrawBoard();
 
@@ -452,7 +452,7 @@ void drawScene()
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    CalculateLight(light_x, light_y, light_z, light_r, light_g, light_b, 0.5);
+    CalculateLight(light_x, light_y, light_z, 0.5);
 
     // 시점
     if (!threed_mode) {
@@ -615,9 +615,7 @@ void throw_bomb() {
     unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
     glUniform3f(Color_Bomb, Red.r, Red.g, Red.b);
 
-    //CalculateLight(bomb_pos.x, bomb_pos.y, bomb_pos.z, light_r, light_g, light_b, 1.0);
-    CalculateLight(bomb_pos.x, bomb_pos.y, bomb_pos.z, Red.r, Red.g, Red.b, 1.0);
-    //CalculateLight(bomb_pos.x, bomb_pos.y, bomb_pos.z, Blue.r, Blue.g, Blue.b);
+    CalculateLight(bomb_pos.x, bomb_pos.y, bomb_pos.z, 1.0);
 
     gluSphere(qobj, 0.5, 20, 20);
 }
@@ -833,12 +831,12 @@ void InitTexture()
 }
 
 // 조명 계산
-void CalculateLight(float lgt_x, float lgt_y, float lgt_z, float lgt_r, float lgt_g, float lgt_b, float amb) {
+void CalculateLight(float lgt_x, float lgt_y, float lgt_z, float amb) {
     unsigned int light_pos = glGetUniformLocation(s_program[0], "lightPos");
     glUniform3f(light_pos, lgt_x, lgt_y, lgt_z);
 
     unsigned int light_color = glGetUniformLocation(s_program[0], "lightColor");
-    glUniform3f(light_color, lgt_r, lgt_g, lgt_b);
+    glUniform3f(light_color, light_r, light_g, light_b);
 
     unsigned int view_pos = glGetUniformLocation(s_program[0], "viewPos");
     glUniform3f(view_pos, camera_x, camera_y, camera_z);
