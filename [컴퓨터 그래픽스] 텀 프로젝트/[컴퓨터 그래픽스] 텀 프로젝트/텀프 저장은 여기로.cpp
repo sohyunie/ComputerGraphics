@@ -55,6 +55,9 @@ void DrawBoard();
 
 // 함수 선언
 void throw_bomb();
+void DrawPlayer();
+void DrawCube();
+void DrawEnemy();
 
 GLUquadricObj* qobj;
 
@@ -168,7 +171,7 @@ float robot_zpos[4] = { 0, };
 
 float player_xpos = 0.0f;
 float player_ypos = 0.0f;
-float player_zpos = -20.0f;
+float player_zpos = 20.0f;
 
 bool robot_default_move = true;
 
@@ -200,7 +203,7 @@ bool firstMouse = true;
 float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
 
-float bomb_z_pos = player_zpos;
+float bomb_z_pos = player_zpos - 5.0;
 
 float Background[] = {
     -1.0,1.0,-1.0, 0.0,1.0,0.0, 1.0,1.0,
@@ -388,10 +391,8 @@ void DrawPlayer()
 {
     S = glm::scale(glm::mat4(1.0f), glm::vec3(0.7, 0.7, 0.7));
     Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(180.0f)), glm::vec3(0.0, 1.0, 0.0));
-    STR = Ry * S;
-
     T = glm::translate(glm::mat4(1.0f), glm::vec3((float)player_xpos, (float)player_ypos, (float)player_zpos));
-    cubeSTR = S * Ry * T;
+    cubeSTR = S * T * Ry;
     unsigned int Player = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(Player, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int Color_Player = glGetUniformLocation(s_program[1], "in_Color");
@@ -421,6 +422,11 @@ void DrawCube(Shape shape)
     glBindVertexArray(VAO[0]);
     glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
 }
+
+void DrawEnemy() {
+
+}
+
 
 void DrawBoard()
 {
@@ -504,19 +510,19 @@ void Keyboard(unsigned char key, int x, int y) {
         if (!threed_mode) {
             cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
         }
-        player_xpos += 1.0f;
+        player_xpos -= 1.0f;
         break;
     case 's':
         if (!threed_mode) {
             cameraPos -= cameraFront * cameraSpeed;
         }
-        player_zpos -= 1.0f;
+        player_zpos += 1.0f;
         break;
     case 'd':
         if (!threed_mode) {
             cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
         }
-        player_xpos -= 1.0f;
+        player_xpos += 1.0f;
         break;
     case 'c':
     case 'C':
@@ -587,7 +593,7 @@ void TimerFunction(int value) {
         if (bomb_z_pos > -30)
             bomb_z_pos -= 0.5f;
         else {
-            bomb_z_pos = player_zpos;
+            bomb_z_pos = player_zpos - 5.0f;
             bomb_mode = false;
         }
     }
@@ -619,7 +625,6 @@ void throw_bomb() {
 
     gluSphere(qobj, 0.5, 20, 20);
 }
-
 
 ////////////////////////////////////////////////////////////////////////
 // 맵을 txt 파일에서 읽어온다
