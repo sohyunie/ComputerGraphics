@@ -49,7 +49,7 @@ void drawScene();
 void TimerFunction(int);
 void Keyboard(unsigned char, int, int);
 void Mouse(int, int, int, int);
-void CalculateLight();
+void CalculateLight(float, float, float, float, float, float, float);
 int Loadfile(int mapCollect);
 void DrawBoard();
 
@@ -199,6 +199,8 @@ float lastFrame = 0.0f;
 bool firstMouse = true;
 float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
+
+float bomb_z_pos = player_zpos;
 
 float Background[] = {
     -1.0,1.0,-1.0, 0.0,1.0,0.0, 1.0,1.0,
@@ -381,6 +383,7 @@ void main(int argc, char** argv) {
     glutMainLoop();
 }
 
+// 플레이어 그리기 함수
 void DrawPlayer()
 {
     S = glm::scale(glm::mat4(1.0f), glm::vec3(0.7, 0.7, 0.7));
@@ -398,6 +401,7 @@ void DrawPlayer()
     glDrawArrays(GL_TRIANGLES, 0, robot_vertices.size());
 }
 
+// 큐브 그리기 함수 -> 맵 그릴 때 사용
 void DrawCube(Shape shape)
 {
     glm::mat4 S = glm::mat4(1.0f);
@@ -445,10 +449,12 @@ void drawScene()
 
     glUseProgram(s_program[0]);
     glUseProgram(s_program[1]);
-    glUseProgram(s_program[2]);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+    CalculateLight(light_x, light_y, light_z, light_r, light_g, light_b, 0.5);
+
+    // 시점
     if (!threed_mode) {
         view = glm::lookAt(cameraPosM, cameraPosM + cameraFront, cameraUp);
         GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
@@ -468,13 +474,12 @@ void drawScene()
     //DrawBoard();
     DrawPlayer();
 
+    // 폭탄
     if (bomb_mode) {
         throw_bomb();
         // throw_bomb = false;
         // 적 구현 이후에 timer함수에서 움직이는거 구현
     }
-
-    CalculateLight();
 
     glutPostRedisplay();
     glutSwapBuffers();
@@ -493,7 +498,7 @@ void Keyboard(unsigned char key, int x, int y) {
         if (!threed_mode) {
             cameraPos += cameraSpeed * cameraFront;
         }
-        player_zpos += 1.0f;
+        player_zpos -= 1.0f;
         break;
     case 'a':
         if (!threed_mode) {
@@ -528,6 +533,7 @@ void Keyboard(unsigned char key, int x, int y) {
     glutPostRedisplay();
 }
 
+// 카메라 시점 변환시 사용하는 마우스 콜백 함수
 void Mouse(int button, int state, int x, int y) {
     if (firstMouse)
     {
@@ -575,35 +581,50 @@ void Mouse(int button, int state, int x, int y) {
     }
 }
 
-void TimerFunction(int value) {
 
+void TimerFunction(int value) {
+    if (bomb_mode) {
+        if (bomb_z_pos > -30)
+            bomb_z_pos -= 0.5f;
+        else {
+            bomb_z_pos = player_zpos;
+            bomb_mode = false;
+        }
+    }
     glutTimerFunc(10, TimerFunction, 1);
 }
 
+// 잔여 HP 표현하는 delta_time 얻는 함수
 void get_time() {
     float currentFrame = glutGet(GLUT_ELAPSED_TIME);
     delta_time = currentFrame - lastFrame;
     lastFrame = currentFrame;
 }
 
+// 폭탄
+
 void throw_bomb() {
     qobj = gluNewQuadric();
-
-    // Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(Mercury_y)), glm::vec3(0.0, 1.0, 0.0));
-    S = glm::scale(glm::mat4(1.0f), glm::vec3(1.5, 1.5, 1.5));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(5.0, 0.0, 0.0));
-    //Planet_STR = Circle_STR * Ry * T;
+    glm::vec3 bomb_pos = glm::vec3(player_xpos, 0.0f, bomb_z_pos);
+    S = glm::scale(glm::mat4(1.0f), glm::vec3(1.0, 1.0, 1.0));
+    T = glm::translate(glm::mat4(1.0f), bomb_pos);
     Bomb_STR = S * T;
     unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(Bomb_STR));
+
     unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
     glUniform3f(Color_Bomb, Red.r, Red.g, Red.b);
+
+    //CalculateLight(bomb_pos.x, bomb_pos.y, bomb_pos.z, light_r, light_g, light_b, 1.0);
+    CalculateLight(bomb_pos.x, bomb_pos.y, bomb_pos.z, Red.r, Red.g, Red.b, 1.0);
+    //CalculateLight(bomb_pos.x, bomb_pos.y, bomb_pos.z, Blue.r, Blue.g, Blue.b);
+
     gluSphere(qobj, 0.5, 20, 20);
 }
 
 
 ////////////////////////////////////////////////////////////////////////
-// 맵을 읽어옵시다
+// 맵을 txt 파일에서 읽어온다
 int Loadfile(int mapCollect)
 {
     FILE* fp = new FILE();
@@ -658,6 +679,7 @@ int Loadfile(int mapCollect)
             }
         }
     }
+
     fclose(fp);
 
     return 1;
@@ -667,28 +689,12 @@ int Loadfile(int mapCollect)
 
 float obj_rot = 0;
 
-//void DrawHPTimer(int winPosX, int WinPosY, char* strMsg, void* font, double color[3]) {
-//    DrawText(10, 10, "test", GLUT_BITMAP_8_BY_13, m_fFontColor);
-//
-//    // draw text on screen
-//    double FontWidth = 0.02;
-//    double GLPosX, GLPosY, GLPosZ;
-//    WinPosToWorldPos(WinPosX, WinPosY, 0, &GLPosX, &GLPosY, &GLPosZ);
-//
-//    glColor3f(Color[R], Color[G], Color[B]);
-//
-//    int len = (int)strlen(strMsg);
-//    glRasterPost3d(GLPosX, GLPosY, GLPosZ);
-//    
-//    for (int i = 0; i < len; i++) {
-//        glutBitmapCharacter(font, strMsg[i]);
-//    }
-// }
-
 GLvoid Reshape(int w, int h) {
     glViewport(0, 0, w, h);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 이후는 초기화함수
 char* filetobuf(const char* file) {
     FILE* fptr; long length; char* buf;
     fptr = fopen(file, "rb"); // Open file for reading
@@ -794,7 +800,7 @@ void InitShader() {
     make_vertexShader();
     make_fragmentShader();
 
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < 2; ++i)
     {
         s_program[i] = glCreateProgram();
         glAttachShader(s_program[i], vertexshader);
@@ -826,17 +832,17 @@ void InitTexture()
     glUniform1i(tLocation, 0);
 }
 
-void CalculateLight() {
-    // 조명 계산
-    unsigned int light_pos = glGetUniformLocation(s_program[2], "lightPos");
-    glUniform3f(light_pos, light_x, light_y, light_z);
+// 조명 계산
+void CalculateLight(float lgt_x, float lgt_y, float lgt_z, float lgt_r, float lgt_g, float lgt_b, float amb) {
+    unsigned int light_pos = glGetUniformLocation(s_program[0], "lightPos");
+    glUniform3f(light_pos, lgt_x, lgt_y, lgt_z);
 
-    unsigned int light_color = glGetUniformLocation(s_program[2], "lightColor");
-    glUniform3f(light_color, light_r, light_g, light_b);
+    unsigned int light_color = glGetUniformLocation(s_program[0], "lightColor");
+    glUniform3f(light_color, lgt_r, lgt_g, lgt_b);
 
-    unsigned int view_pos = glGetUniformLocation(s_program[2], "viewPos");
+    unsigned int view_pos = glGetUniformLocation(s_program[0], "viewPos");
     glUniform3f(view_pos, camera_x, camera_y, camera_z);
 
-    unsigned int ambientLight_on = glGetUniformLocation(s_program[2], "ambientLight_on_off");
-    glUniform3f(ambientLight_on, 0.7, 0.7, 0.7);
+    unsigned int ambientLight_on = glGetUniformLocation(s_program[0], "ambientLight_on_off");
+    glUniform3f(ambientLight_on, amb, amb, amb);
 }

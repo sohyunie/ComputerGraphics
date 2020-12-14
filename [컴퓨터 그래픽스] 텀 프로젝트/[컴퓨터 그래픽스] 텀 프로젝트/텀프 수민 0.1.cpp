@@ -477,13 +477,14 @@ void Keyboard(unsigned char key, int x, int y) {
             threed_mode = false;
         break;
     case 'b':
-        // 일단 보이는것만.. b로 구현함 ㅠㅠ
+        // 일단 보이는것만 구현
         bomb_mode = true;
         break;
     }
     glutPostRedisplay();
 }
 
+// 마우스 시점 변환
 void Mouse(int button, int state, int x, int y) {
     if (firstMouse)
     {
