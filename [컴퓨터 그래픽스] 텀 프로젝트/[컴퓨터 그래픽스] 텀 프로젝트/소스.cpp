@@ -34,12 +34,8 @@
 
 #define SHAPE_SIZE 0.5f // Enemy size
 
-<<<<<<< HEAD
 #define SIZE 31 // 맵 사이즈
-=======
-#define SIZE 22 // 맵 사이즈
 #define MONSTER_SIZE 10
->>>>>>> fdaac906f52e8986ddba58df21a116ed9e25f24b
 using namespace std;
 
 normal_distribution <float>uid_mColor{ 0.0,1.0 };
@@ -73,11 +69,11 @@ struct Vector4 {
 
     Vector4() {}
 
-    Vector4(float x, float y, float z, float w) {
-        this->minx = x;
-        this->minz = y;
-        this->maxx = z;
-        this->maxz = w;
+    Vector4(float minX, float minZ, float maxX, float maxZ) {
+        this->minx = minX;
+        this->minz = minZ;
+        this->maxx = maxX;
+        this->maxz = maxZ;
     }
 };
 
@@ -94,11 +90,8 @@ struct Shape {
     Vector3 color;
     Vector3 scale;
     Vector3 pos;
-<<<<<<< HEAD
     Vector4 bb;
-=======
     Vector3 dir;
->>>>>>> fdaac906f52e8986ddba58df21a116ed9e25f24b
 
     Shape() {
         return;
@@ -449,10 +442,6 @@ void main(int argc, char** argv) {
 
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
-<<<<<<< HEAD
-    //glutMouseFunc(Mouse);
-=======
->>>>>>> fdaac906f52e8986ddba58df21a116ed9e25f24b
     glutKeyboardFunc(Keyboard);
     glutSpecialFunc(SpecialKeyboard);
     glutSpecialUpFunc(releaseKey);
@@ -487,10 +476,10 @@ void get_bb(Vector4 vec) {
     glColor3f(1.0f, 0.0f, 0.0f);
     glLineWidth(5.0f);
     glBegin(GL_LINE_LOOP);
-    glVertex3f(vec.minx, -1.0, vec.minz);
-    glVertex3f(vec.maxx, -1.0, vec.maxz);
-    glVertex3f(vec.maxx, 3.0, vec.maxz);
-    glVertex3f(vec.minx, 3.0, vec.minz);
+    glVertex3f(vec.minx, 1.0, vec.maxz);
+    glVertex3f(vec.minx, 1.0, vec.minz);
+    glVertex3f(vec.maxx, 1.0, vec.minz);
+    glVertex3f(vec.maxx, 1.0, vec.maxz);
     glEnd();
 }
 
@@ -538,21 +527,21 @@ void Draw2ndCube(Shape shape) {
 void letter_Play()
 {
     glColor3f(1, 1, 1);
-    const char* string = "ITEM	:";    
+    const char* string = "ITEM	:";
     glRasterPos2f(-80, -80);  // 문자 출력할 위치 설정  
     int len = (int)strlen(string);
     for (int i = 0; i < len; i++)
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
 
     glColor3f(1, 1, 1);
-    const char* string_1 = "HP	:";    
+    const char* string_1 = "HP	:";
     glRasterPos2f(-80, -60);  // 문자 출력할 위치 설정  
     int len_1 = (int)strlen(string);
     for (int i = 0; i < len; i++)
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string_1[i]);
 
     glColor3f(1, 1, 1);
-    const char* string_2 = "SCORE	:";    
+    const char* string_2 = "SCORE	:";
     glRasterPos2f(-80, -40);  // 문자 출력할 위치 설정  
     int len_2 = (int)strlen(string);
     for (int i = 0; i < len; i++)
@@ -637,7 +626,7 @@ void DrawMonster(Shape monster) {
     glm::mat4 monsterSTR = glm::mat4(1.0f);
     qobj = gluNewQuadric();
     glm::vec3 monsterPos = glm::vec3(monster.pos.x, monster.pos.y, monster.pos.z);
-    S = glm::scale(glm::mat4(1.0f), glm::vec3(4,4,4));
+    S = glm::scale(glm::mat4(1.0f), glm::vec3(4, 4, 4));
     T = glm::translate(glm::mat4(1.0f), monsterPos);
     monsterSTR = S * T;
     unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
@@ -686,11 +675,6 @@ void drawScene()
         dir = Vector3(player_xpos + lx, player_ypos + ly, player_zpos + lz);
         yPos *= 20;
     }
-<<<<<<< HEAD
-
-=======
- 
->>>>>>> fdaac906f52e8986ddba58df21a116ed9e25f24b
     CameraSetting(s_program[0], Vector3(player_xpos, player_ypos, player_zpos), dir, yPos);
     DrawBoard();
     DrawPlayer();
