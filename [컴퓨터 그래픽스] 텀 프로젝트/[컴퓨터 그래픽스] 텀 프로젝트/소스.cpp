@@ -482,10 +482,10 @@ void get_bb(Shape shape) {
         glLineWidth(7);
         glBegin(GL_LINE_LOOP);
         {
-            glVertex3f(-1, 1.0, 1);
-            glVertex3f(-1, 1.0, -1);
-            glVertex3f(1, 1.0, -1);
-            glVertex3f(1, 1.0, 1);
+            glVertex3f(-shape.radius, 1.0, shape.radius);
+            glVertex3f(-shape.radius, 1.0, -shape.radius);
+            glVertex3f(shape.radius, 1.0, -shape.radius);
+            glVertex3f(shape.radius, 1.0, shape.radius);
         }
         glEnd();
         glLineWidth(1);
@@ -629,7 +629,7 @@ void DrawMonster(Shape monster) {
     glm::vec3 monsterPos = glm::vec3(monster.pos.x, monster.pos.y, monster.pos.z);
     S = glm::scale(glm::mat4(1.0f), glm::vec3(4, 4, 4));
     T = glm::translate(glm::mat4(1.0f), monsterPos);
-    monsterSTR = S * T;
+    monsterSTR = T * S;
     unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(monsterSTR));
 
@@ -841,7 +841,7 @@ void throw_bomb() {
     glm::vec3 bomb_pos = glm::vec3(bombShape.pos.x, bombShape.pos.y, bombShape.pos.z);
     S = glm::scale(glm::mat4(1.0f), glm::vec3(1.0, 1.0, 1.0));
     T = glm::translate(glm::mat4(1.0f), bomb_pos);
-    Bomb_STR = S * T;
+    Bomb_STR = T * S;
     unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(Bomb_STR));
 
