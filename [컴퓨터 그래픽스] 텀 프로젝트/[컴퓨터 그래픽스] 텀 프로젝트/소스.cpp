@@ -35,6 +35,38 @@
 #define SIZE 22 // 맵 사이즈
 using namespace std;
 
+struct Vector3 {
+    float x;
+    float y;
+    float z;
+
+    Vector3() {}
+
+    Vector3(float x, float y, float z) {
+        this->x = x;
+        this->y = y;
+        this->z = z;
+    }
+};
+
+enum BOARD_TYPE {
+    NONE = 0,
+    WALL = 1,
+    ITEM = 2,
+    FIXED_WALL = 5,
+};
+
+struct Shape {
+    BOARD_TYPE type;
+    Vector3 color;
+    Vector3 scale;
+    Vector3 pos;
+
+    Shape() {
+        return;
+    }
+};
+
 // 기본 함수 선언
 char* filetobuf(char*);
 void make_vertexShader();
@@ -52,6 +84,7 @@ void Mouse(int, int, int, int);
 void CalculateLight();
 int Loadfile(int mapCollect);
 void DrawBoard();
+void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir);
 
 // 함수 선언
 void throw_bomb();
@@ -79,38 +112,6 @@ int mapCollect = 0;
 float colorbuffer[4][3] = { 0 };
 
 unsigned int texture;
-
-struct Vector3 {
-    float x;
-    float y;
-    float z;
-
-    Vector3(){}
-
-    Vector3(float x, float y, float z) {
-        this->x = x;
-        this->y = y;
-        this->z = z;
-    }
-};
-
-enum BOARD_TYPE {
-    NONE = 0,
-    WALL = 1,
-    ITEM = 2,
-    FIXED_WALL = 5,
-};
-
-struct Shape {
-    BOARD_TYPE type;
-    Vector3 color;
-    Vector3 scale;
-    Vector3 pos;
-
-    Shape() {
-        return;
-    }
-};
 
 Shape boardShape[SIZE][SIZE];
 
@@ -387,7 +388,7 @@ void DrawPlayer()
     Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(180.0f)), glm::vec3(0.0, 1.0, 0.0));
     STR = Ry * S;
 
-    T = glm::translate(glm::mat4(1.0f), glm::vec3((float)player_xpos, (float)player_ypos, (float)player_zpos));
+    T = glm::translate(glm::mat4(1.0f), glm::vec3((float)0, (float)0, (float)0));
     cubeSTR = S * Ry * T;
     unsigned int Player = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(Player, 1, GL_FALSE, glm::value_ptr(cubeSTR));
@@ -466,6 +467,7 @@ void drawScene()
     glUniformMatrix4fv(Projectionlocation, 1, GL_FALSE, value_ptr(projection));
 
     //DrawBoard();
+    CameraSetting(s_program[0], Vector3(player_xpos, player_ypos, player_zpos), Vector3(0,0,-1));
     DrawPlayer();
 
     if (bomb_mode) {
@@ -491,27 +493,27 @@ float cameraSpeed = 1.0f;
 void Keyboard(unsigned char key, int x, int y) {
     switch (key) {
     case'w':
-        if (!threed_mode) {
-            cameraPos += cameraSpeed * cameraFront;
-        }
+        //if (!threed_mode) {
+        //    cameraPos += cameraSpeed * cameraFront;
+        //}
         player_zpos += 1.0f;
         break;
     case 'a':
-        if (!threed_mode) {
-            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        }
+        //if (!threed_mode) {
+        //    cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        //}
         player_xpos += 1.0f;
         break;
     case 's':
-        if (!threed_mode) {
-            cameraPos -= cameraFront * cameraSpeed;
-        }
+        //if (!threed_mode) {
+        //    cameraPos -= cameraFront * cameraSpeed;
+        //}
         player_zpos -= 1.0f;
         break;
     case 'd':
-        if (!threed_mode) {
-            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        }
+        //if (!threed_mode) {
+        //    cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        //}
         player_xpos -= 1.0f;
         break;
     case 'c':
@@ -846,6 +848,39 @@ void InitTexture()
     glUseProgram(s_program[2]);
     int tLocation = glGetUniformLocation(s_program[2], "outTexture");
     glUniform1i(tLocation, 0);
+}
+
+void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir)
+{
+    glm::mat4 TR = glm::mat4(1.0f);
+    //glm::mat4 Rx = glm::mat4(1.0f);
+    //glm::mat4 RxY = glm::mat4(1.0f);
+    glm::mat4 Tx = glm::mat4(1.0f);
+    glm::mat4 TxY = glm::mat4(1.0f);
+    //int modelLoc = glGetUniformLocation(s_program, "Transform");
+    //Tx = glm::translate(Tx, glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z));
+    //Rx = glm::rotate(Rx, glm::radians((float)cameraRotateangle), glm::vec3(0.0, 1.0, 0.0));
+    //TR = Tx;
+    //glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(TR));
+
+    int projLoc = glGetUniformLocation(s_program, "Projection");
+    glm::mat4 projection = glm::mat4(1.0f);
+    projection = glm::perspective(glm::radians((float)45.0f), 800.f / 600.f, 0.1f, 100.0f);
+
+    glm::vec3 cameraPos = glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    glm::vec3 cameraDirection = glm::vec3(cameraDir.x, cameraDir.y, cameraDir.z);
+    glm::vec3 cameraUp = glm::vec3(0, 1, 0);
+    glm::mat4 view = glm::mat4(1.0f);
+    
+    int viewLoc = glGetUniformLocation(s_program, "View");
+
+    view = glm::lookAt(cameraPos, cameraDirection, cameraUp);
+    //RxY = glm::rotate(RxY, glm::radians((float)cameraRotateangleY), glm::vec3(0.0, 1.0, 0.0));
+    //Tx = glm::translate(Tx, glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z));
+    //view *= Tx;
+
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
 }
 
 void CalculateLight() {
