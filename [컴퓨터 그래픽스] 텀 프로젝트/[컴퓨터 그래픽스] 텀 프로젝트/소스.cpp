@@ -37,6 +37,38 @@
 #define SIZE 22 // 맵 사이즈
 using namespace std;
 
+struct Vector3 {
+    float x;
+    float y;
+    float z;
+
+    Vector3() {}
+
+    Vector3(float x, float y, float z) {
+        this->x = x;
+        this->y = y;
+        this->z = z;
+    }
+};
+
+enum BOARD_TYPE {
+    NONE = 0,
+    WALL = 1,
+    ITEM = 2,
+    FIXED_WALL = 5,
+};
+
+struct Shape {
+    BOARD_TYPE type;
+    Vector3 color;
+    Vector3 scale;
+    Vector3 pos;
+
+    Shape() {
+        return;
+    }
+};
+
 // 기본 함수 선언
 char* filetobuf(char*);
 void make_vertexShader();
@@ -54,6 +86,7 @@ void Mouse(int, int, int, int);
 void CalculateLight(float, float, float, float);
 int Loadfile(int mapCollect);
 void DrawBoard();
+void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir);
 
 // 함수 선언
 void throw_bomb();
@@ -86,38 +119,6 @@ void initTextures();
 
 int mapCollect = 0;
 float colorbuffer[4][3] = { 0 };
-
-struct Vector3 {
-    float x;
-    float y;
-    float z;
-
-    Vector3() {}
-
-    Vector3(float x, float y, float z) {
-        this->x = x;
-        this->y = y;
-        this->z = z;
-    }
-};
-
-enum BOARD_TYPE {
-    NONE = 0,
-    WALL = 1,
-    ITEM = 2,
-    FIXED_WALL = 5,
-};
-
-struct Shape {
-    BOARD_TYPE type;
-    Vector3 color;
-    Vector3 scale;
-    Vector3 pos;
-
-    Shape() {
-        return;
-    }
-};
 
 Shape boardShape[SIZE][SIZE];
 
@@ -176,6 +177,8 @@ float robot_zpos[4] = { 0, };
 float player_xpos = 0.0f;
 float player_ypos = 0.0f;
 float player_zpos = 20.0f;
+
+Vector3 cameraDir = Vector3();
 
 float enemy_xpos;
 float enemy_ypos = 0.0f;
@@ -470,10 +473,12 @@ void main(int argc, char** argv) {
 // 플레이어 그리기 함수
 void DrawPlayer()
 {
+    glm::mat4 STR = glm::mat4(1.0f);
     glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(0.7, 0.7, 0.7));
     glm::mat4 Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(180.0f)), glm::vec3(0.0, 1.0, 0.0));
     STR = S * Ry;
 
+    glm::mat4 cubeSTR = glm::mat4(1.0f);
     glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3((float)player_xpos, (float)player_ypos, (float)player_zpos));
     cubeSTR = S * T * Ry;
     unsigned int Player = glGetUniformLocation(s_program[0], "Transform");
@@ -577,23 +582,24 @@ void drawScene()
 
     CalculateLight(light_x, light_y, light_z, 0.5);
 
-    // 시점
-    if (!threed_mode) {
-        view = glm::lookAt(cameraPosM, cameraPosM + cameraFront, cameraUp);
-        GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
-        glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
-    }
-    else {
-        view = glm::lookAt(cameraPos3, cameraDirection, cameraUp);
-        GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
-        glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
-    }
+    //// 시점
+    //if (!threed_mode) {
+    //    view = glm::lookAt(cameraPosM, cameraPosM + cameraFront, cameraUp);
+    //    GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
+    //    glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
+    //}
+    //else {
+    //    view = glm::lookAt(cameraPos3, cameraDirection, cameraUp);
+    //    GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
+    //    glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
+    //}
 
-    glm::mat4 projection = glm::mat4(1.0f);
-    projection = glm::perspective(glm::radians(fov), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
-    GLuint Projectionlocation = glGetUniformLocation(s_program[0], "Projection");
-    glUniformMatrix4fv(Projectionlocation, 1, GL_FALSE, value_ptr(projection));
-
+    //glm::mat4 projection = glm::mat4(1.0f);
+    //projection = glm::perspective(glm::radians(fov), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+    //GLuint Projectionlocation = glGetUniformLocation(s_program[0], "Projection");
+    //glUniformMatrix4fv(Projectionlocation, 1, GL_FALSE, value_ptr(projection));
+    
+    CameraSetting(s_program[0], Vector3(player_xpos, player_ypos, player_zpos), cameraDir);
     DrawBoard();
     DrawPlayer();
 
@@ -622,28 +628,32 @@ float cameraSpeed = 1.0f;
 void Keyboard(unsigned char key, int x, int y) {
     switch (key) {
     case'w':
-        if (!threed_mode) {
-            cameraPos += cameraSpeed * cameraFront;
-        }
+        //if (!threed_mode) {
+        //    cameraPos += cameraSpeed * cameraFront;
+        //}
         player_zpos -= 1.0f;
+        cameraDir = Vector3(0,0,-1);
         break;
     case 'a':
-        if (!threed_mode) {
-            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        }
+        //if (!threed_mode) {
+        //    cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        //}
         player_xpos -= 1.0f;
+        cameraDir = Vector3(-1, 0, 0);
         break;
     case 's':
-        if (!threed_mode) {
-            cameraPos -= cameraFront * cameraSpeed;
-        }
+        //if (!threed_mode) {
+        //    cameraPos -= cameraFront * cameraSpeed;
+        //}
         player_zpos += 1.0f;
+        cameraDir = Vector3(0, 0, 1);
         break;
     case 'd':
-        if (!threed_mode) {
-            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        }
+        //if (!threed_mode) {
+        //    cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        //}
         player_xpos += 1.0f;
+        cameraDir = Vector3(1, 0, 0);
         break;
     case 'c':
     case 'C':
@@ -722,7 +732,7 @@ void Mouse(int button, int state, int x, int y) {
     front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     front.y = sin(glm::radians(pitch));
     front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(front);
+    //cameraFront = glm::normalize(front);
 
     if ((button == 3) || (button == 4)) {
         if (state == GLUT_UP)
@@ -798,7 +808,7 @@ int Loadfile(int mapCollect)
 
     if (fp == NULL)
     {
-        printf("\n실패\n");
+        printf("\n board gen fail\n");
         return 1;
     }
 
@@ -1132,4 +1142,38 @@ void CalculateLight(float lgt_x, float lgt_y, float lgt_z, float amb) {
 
     unsigned int ambientLight_on = glGetUniformLocation(s_program[0], "ambientLight_on_off");
     glUniform3f(ambientLight_on, amb, amb, amb);
+}
+
+void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir)
+{
+    glm::mat4 TR = glm::mat4(1.0f);
+    glm::mat4 Tx = glm::mat4(1.0f);
+    glm::mat4 TxY = glm::mat4(1.0f);
+    //int modelLoc = glGetUniformLocation(s_program, "Transform");
+        //Tx = glm::translate(Tx, glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z));
+        //Rx = glm::rotate(Rx, glm::radians((float)cameraRotateangle), glm::vec3(0.0, 1.0, 0.0));
+        //TR = Tx;
+        //glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(TR));
+
+    int projLoc = glGetUniformLocation(s_program, "Projection");
+    glm::mat4 projection = glm::mat4(1.0f);
+    projection = glm::perspective(glm::radians((float)45.0f), 800.f / 600.f, 0.1f, 100.0f);
+    glm::vec3 cameraPos = glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    glm::vec3 cameraDirection = glm::vec3(0,0,0);
+    cout << "cameraPosition" << endl;
+    cout << cameraDirection.x << endl;
+    cout << cameraDirection.y << endl;
+    cout << cameraDirection.z << endl;
+    glm::vec3 cameraUp = glm::vec3(0, 1, 0);
+    glm::mat4 view = glm::mat4(1.0f);
+
+    int viewLoc = glGetUniformLocation(s_program, "View");
+
+    view = glm::lookAt(cameraDirection, cameraPos, cameraUp);
+    //RxY = glm::rotate(RxY, glm::radians((float)cameraRotateangleY), glm::vec3(0.0, 1.0, 0.0));
+        //Tx = glm::translate(Tx, glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z));
+        //view *= Tx;
+
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
 }
