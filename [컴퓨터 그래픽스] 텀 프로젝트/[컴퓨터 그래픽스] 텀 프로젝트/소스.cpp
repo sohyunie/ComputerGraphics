@@ -86,7 +86,7 @@ void Mouse(int, int, int, int);
 void CalculateLight(float, float, float, float);
 int Loadfile(int mapCollect);
 void DrawBoard();
-void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir);
+void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir, float yPos);
 
 // 함수 선언
 void throw_bomb();
@@ -95,6 +95,10 @@ void DrawCube();
 void Draw2ndCube();
 void DrawEnemy();
 void DrawKey();
+
+void SpecialKeyboard(int key, int x, int y); //키보드 조종
+void Keyboard(unsigned char Key, int x, int y); // 키보드 조종2
+void releaseKey(int key, int x, int y);
 
 GLUquadricObj* qobj;
 
@@ -221,6 +225,23 @@ float bomb_z_pos = player_zpos - 5.0;
 float player_radius = 1.0f;
 float enemy_radius = 0.75f;
 float bomb_radius = 0.3f;
+
+
+////////////////////////////////////////////
+// Camera
+
+// 각
+float angle = 0.0f;
+
+//벡터
+float lx = 0.0f, lz = -1.0f, ly = 0.0f;
+
+// 이동 변수
+float deltaAngle = 0.0f;
+float deltaMove = 0;
+int xOrigin = -1;
+
+bool isFPS = false;
 
 float Background[] = {
     -1.0,1.0,-1.0, 0.0,1.0,0.0, 1.0,1.0,
@@ -401,21 +422,9 @@ bool res_robot = loadOBJ("robot.obj", robot_vertices, robot_uvs, robot_normals);
 bool res_cube = loadOBJ("cube3.obj", cube_vertices, cube_uvs, cube_normals);
 bool res_pyramid = loadOBJ("pyramid.obj", pyramid_vertices, pyramid_uvs, pyramid_normals);
 
-// 카메라 벡터 선언
-glm::vec3 cameraPos = glm::vec3(player_xpos, player_ypos, player_zpos);
-glm::vec3 cameraDirection = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraPos3 = glm::vec3(0.0f, 20.0f, 30.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
-glm::vec3 cameraPosM = glm::vec3(0.0f, 0.0f, 3.0f);
 float radius = 5.0f;
 float cameraX = sin(glutGet(GLUT_ELAPSED_TIME)) * radius;
 float cameraZ = cos(glutGet(GLUT_ELAPSED_TIME)) * radius;
-
-float yaw = -90.0f;
-float pitch = 0.0f;
-float fov = 45.0f;
 
 // 색 지정
 glm::vec3 Red = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -471,6 +480,8 @@ void main(int argc, char** argv) {
     glutReshapeFunc(Reshape);
     glutMouseFunc(Mouse);
     glutKeyboardFunc(Keyboard);
+    glutSpecialFunc(SpecialKeyboard);
+    glutSpecialUpFunc(releaseKey);
     glutTimerFunc(50, TimerFunction, 1);
     glutMainLoop();
 }
@@ -480,12 +491,15 @@ void DrawPlayer()
 {
     glm::mat4 STR = glm::mat4(1.0f);
     glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(0.7, 0.7, 0.7));
-    glm::mat4 Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(180.0f)), glm::vec3(0.0, 1.0, 0.0));
+    glm::mat4 Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(180 - (angle + deltaAngle) * 180.0 / 3.14)), glm::vec3(0.0, 1.0, 0.0));
     STR = S * Ry;
+
+
+    //glRotatef(180 - (angle + deltaAngle) * 180.0 / 3.14, 0.0, 1.0, 0.0);
 
     glm::mat4 cubeSTR = glm::mat4(1.0f);
     glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3((float)player_xpos, (float)player_ypos, (float)player_zpos));
-    cubeSTR = S * T * Ry;
+    cubeSTR = T * Ry * S;
     unsigned int Player = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(Player, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int Color_Player = glGetUniformLocation(s_program[1], "in_Color");
@@ -579,7 +593,7 @@ void DrawBoard()
     {
         for (int j = 0; j < SIZE; j++)
         {
-            printf("%d ", boardShape[i][j]);
+            //printf("%d ", boardShape[i][j]);
 
             switch (boardShape[i][j].type) {
             case BOARD_TYPE::NONE:
@@ -594,8 +608,19 @@ void DrawBoard()
                 break;
             }
         }
-        printf("\n");
+        //printf("\n");
     }
+}
+
+void computePos(float deltaMove)
+{
+    player_xpos += deltaMove * lx * 0.01f;
+    player_zpos += deltaMove * lz * 0.01f;
+}
+void computeDir(float deltaAngle) {
+    angle += deltaAngle;
+    lx = sin(angle);
+    lz = -cos(angle);
 }
 
 void drawScene()
@@ -626,8 +651,24 @@ void drawScene()
     //projection = glm::perspective(glm::radians(fov), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
     //GLuint Projectionlocation = glGetUniformLocation(s_program[0], "Projection");
     //glUniformMatrix4fv(Projectionlocation, 1, GL_FALSE, value_ptr(projection));
+
+    if (deltaAngle)
+        computeDir(deltaAngle);
     
-    CameraSetting(s_program[0], Vector3(player_xpos, player_ypos, player_zpos), cameraDir);
+    if(deltaMove)
+        computePos(deltaMove);
+
+    Vector3 dir = Vector3();
+    float yPos = 5.0f;
+    cout << isFPS << endl;
+    if (!isFPS)
+        dir = Vector3(player_xpos + lx * 100, player_ypos + ly, player_zpos + lz * 100);
+    else {
+        dir = Vector3(player_xpos + lx, player_ypos + ly, player_zpos + lz);
+        yPos *= 10;
+    }
+    
+    CameraSetting(s_program[0], Vector3(player_xpos, player_ypos, player_zpos), dir, yPos);
     DrawBoard();
     DrawPlayer();
 
@@ -653,35 +694,54 @@ int y_roll = 0;
 
 float cameraSpeed = 1.0f;
 
+void releaseKey(int key, int x, int y) {
+
+    switch (key)
+    {
+    case GLUT_KEY_LEFT:
+    case GLUT_KEY_RIGHT: deltaAngle = 0; break;
+
+    case GLUT_KEY_UP:
+    case GLUT_KEY_DOWN: deltaMove = 0; break;
+    }
+}
+
 void Keyboard(unsigned char key, int x, int y) {
     switch (key) {
-    case'w':
-        //if (!threed_mode) {
-        //    cameraPos += cameraSpeed * cameraFront;
-        //}
-        player_zpos -= 1.0f;
-        cameraDir = Vector3(0,0,-1);
+    //case'w':
+    //    //if (!threed_mode) {
+    //    //    cameraPos += cameraSpeed * cameraFront;
+    //    //}
+    //    x -= 1.0f;
+    //    player_zpos -= 1.0f;
+    //    cameraDir = Vector3(0, 0, -1);
+    //    break;
+    //case 'a':
+    //    //if (!threed_mode) {
+    //    //    cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    //    //}
+    //    player_xpos -= 1.0f;
+    //    cameraDir = Vector3(-1, 0, 0);
+    //    break;
+    //case 's':
+    //    //if (!threed_mode) {
+    //    //    cameraPos -= cameraFront * cameraSpeed;
+    //    //}
+    //    player_zpos += 1.0f;
+    //    cameraDir = Vector3(0, 0, 1);
+    //    break;
+    //case 'd':
+    //    //if (!threed_mode) {
+    //    //    cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    //    //}
+    //    player_xpos += 1.0f;
+    //    cameraDir = Vector3(1, 0, 0);
+    //    break;
+    case '1':
+        isFPS = true;
         break;
-    case 'a':
-        //if (!threed_mode) {
-        //    cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        //}
-        player_xpos -= 1.0f;
-        cameraDir = Vector3(-1, 0, 0);
-        break;
-    case 's':
-        //if (!threed_mode) {
-        //    cameraPos -= cameraFront * cameraSpeed;
-        //}
-        player_zpos += 1.0f;
-        cameraDir = Vector3(0, 0, 1);
-        break;
-    case 'd':
-        //if (!threed_mode) {
-        //    cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        //}
-        player_xpos += 1.0f;
-        cameraDir = Vector3(1, 0, 0);
+    case '3':
+        isFPS = false;
         break;
     case 'c':
     case 'C':
@@ -699,6 +759,26 @@ void Keyboard(unsigned char key, int x, int y) {
         enemy_xpos = random_xpos;
         enemy_valid = true;
         break;
+    }
+}
+
+void SpecialKeyboard(int key, int xx, int yy)
+{
+    if (key == GLUT_KEY_LEFT)
+    {
+        deltaAngle = -0.025f;
+    }
+    if (key == GLUT_KEY_RIGHT)
+    {
+        deltaAngle = 0.025f;
+    }
+    if (key == GLUT_KEY_UP)
+    {
+        deltaMove = 15.0;
+    }
+    if (key == GLUT_KEY_DOWN)
+    {
+        deltaMove = -15.0;
     }
     glutPostRedisplay();
 }
@@ -727,55 +807,6 @@ void TimerFunction(int value) {
     }
     glutTimerFunc(10, TimerFunction, 1);
 }
-
-// 카메라 시점 변환시 사용하는 마우스 콜백 함수
-void Mouse(int button, int state, int x, int y) {
-    if (firstMouse)
-    {
-        lastX = x;
-        lastY = y;
-        firstMouse = false;
-    }
-
-    float xoffset = x - lastX;
-    float yoffset = lastY - y;
-    lastX = x;
-    lastY = y;
-
-    printf("lastX, lastY : (%f, %f)\n", lastX, lastY);
-
-    float sensitivity = 1;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-
-    if (pitch > 89.0f)
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
-
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    //cameraFront = glm::normalize(front);
-
-    if ((button == 3) || (button == 4)) {
-        if (state == GLUT_UP)
-            return;
-        printf("Scroll %s At %d, %d\n", (button == 3) ? "Up" : "Down", x, y);
-
-        if (fov >= 1.0f && fov <= 45.0f)
-            fov -= yoffset;
-        if (fov <= 1.0f)
-            fov = 1.0f;
-        if (fov >= 45.0f)
-            fov = 45.0f;
-    }
-}
-
 
 // 잔여 HP 표현하는 delta_time 얻는 함수
 void get_time() {
@@ -1210,35 +1241,18 @@ void CalculateLight(float lgt_x, float lgt_y, float lgt_z, float amb) {
     glUniform3f(ambientLight_on, amb, amb, amb);
 }
 
-void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir)
+void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir, float yPos)
 {
-    glm::mat4 TR = glm::mat4(1.0f);
-    glm::mat4 Tx = glm::mat4(1.0f);
-    glm::mat4 TxY = glm::mat4(1.0f);
-    //int modelLoc = glGetUniformLocation(s_program, "Transform");
-        //Tx = glm::translate(Tx, glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z));
-        //Rx = glm::rotate(Rx, glm::radians((float)cameraRotateangle), glm::vec3(0.0, 1.0, 0.0));
-        //TR = Tx;
-        //glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(TR));
-
     int projLoc = glGetUniformLocation(s_program, "Projection");
     glm::mat4 projection = glm::mat4(1.0f);
     projection = glm::perspective(glm::radians((float)45.0f), 800.f / 600.f, 0.1f, 100.0f);
-    glm::vec3 cameraPos = glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
-    glm::vec3 cameraDirection = glm::vec3(0,0,0);
-    cout << "cameraPosition" << endl;
-    cout << cameraDirection.x << endl;
-    cout << cameraDirection.y << endl;
-    cout << cameraDirection.z << endl;
+    glm::vec3 cameraPos = glm::vec3(cameraPosition.x, cameraPosition.y + yPos, cameraPosition.z);
+    glm::vec3 cameraDirection = glm::vec3(cameraDir.x, cameraDir.y, cameraDir.z);
     glm::vec3 cameraUp = glm::vec3(0, 1, 0);
     glm::mat4 view = glm::mat4(1.0f);
 
     int viewLoc = glGetUniformLocation(s_program, "View");
-
-    view = glm::lookAt(cameraDirection, cameraPos, cameraUp);
-    //RxY = glm::rotate(RxY, glm::radians((float)cameraRotateangleY), glm::vec3(0.0, 1.0, 0.0));
-        //Tx = glm::translate(Tx, glm::vec3(cameraPosition.x, cameraPosition.y, cameraPosition.z));
-        //view *= Tx;
+    view = glm::lookAt(cameraPos, cameraDirection, cameraUp);
 
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
