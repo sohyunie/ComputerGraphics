@@ -563,6 +563,30 @@ void Draw2ndCube(Shape shape) {
     glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
 }
 
+void letter_Play()
+{
+    glColor3f(1, 1, 1);
+    const char* string = "ITEM	:";    
+    glRasterPos2f(-80, -80);  // 문자 출력할 위치 설정  
+    int len = (int)strlen(string);
+    for (int i = 0; i < len; i++)
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
+
+    glColor3f(1, 1, 1);
+    const char* string_1 = "HP	:";    
+    glRasterPos2f(-80, -60);  // 문자 출력할 위치 설정  
+    int len_1 = (int)strlen(string);
+    for (int i = 0; i < len; i++)
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string_1[i]);
+
+    glColor3f(1, 1, 1);
+    const char* string_2 = "SCORE	:";    
+    glRasterPos2f(-80, -40);  // 문자 출력할 위치 설정  
+    int len_2 = (int)strlen(string);
+    for (int i = 0; i < len; i++)
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string_2[i]);
+}
+
 void DrawEnemy() {
     //glBindVertexArray(vao[1]);
     //glActiveTexture(GL_TEXTURE0);
@@ -710,6 +734,7 @@ void drawScene()
         // throw_bomb = false;
         // 적 구현 이후에 timer함수에서 움직이는거 구현
     }
+    letter_Play();
 
     glutPostRedisplay();
     glutSwapBuffers();
