@@ -27,12 +27,12 @@
 
 #define MAXFPS 60
 
-#define MAP_1 "C:\Users\sumin\Desktop\2020\컴퓨터 그래픽스\termproj_git\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\MAP_Veryeasy.txt"
-#define MAP_2 "MAP_Easy.txt"
-#define MAP_3 "MAP_Normal.txt"
-#define MAP_4 "MAP_Hard.txt"
-#define MAP_5 "MAP_Veryhard.txt"
-#define INIT "MAP_Veryeasy.txt"
+#define MAP_1 "MAP_1.txt"
+#define MAP_2 "MAP_2.txt"
+#define MAP_3 "MAP_3.txt"
+#define MAP_4 "MAP_4.txt"
+#define MAP_5 "MAP_5.txt"
+#define INIT "MAP_1.txt"
 
 #define SIZE 22 // 맵 사이즈
 using namespace std;
@@ -548,21 +548,13 @@ void TimerFunction(int value) {
 
 int HP = 10000;
 
-const double fpsLimit = 1.0 / 60.0;
-float lastUpdate = 0.0f;
-
 void get_time() {
     float currentFrame = glutGet(GLUT_ELAPSED_TIME);
-    delta_time = currentFrame - lastUpdate;
+    delta_time = currentFrame - lastFrame;
+    lastFrame = delta_time;
 
-
-    if ((currentFrame - lastFrame) >= fpsLimit) {
-        lastFrame = currentFrame;
-    }
-    lastUpdate = currentFrame;
-
-    HP -= lastUpdate;
-    printf("deltatime : %f\n", delta_time);
+    HP -= lastFrame;
+    /*printf("deltatime : %f\n", delta_time);*/
     if (HP % 100 == 0) {
         printf("HP : %d \n", HP);
     }
@@ -617,12 +609,9 @@ FILE* fp;
 // 맵을 읽어옵시다
 int Loadfile()
 {
-    printf("fdksjalfnvsafjwelscdk,njfal.\n");
-
     switch (mapcollect)
     {
     case 0:
-        printf("fdksjalfnvsafjwelscdk,njfal.\n");
         fp = fopen(MAP_1, "rt");
         break;
     case 1:
@@ -985,23 +974,7 @@ void board_maker()
         }
     }
 }
-//void DrawHPTimer(int winPosX, int WinPosY, char* strMsg, void* font, double color[3]) {
-//    DrawText(10, 10, "test", GLUT_BITMAP_8_BY_13, m_fFontColor);
-//
-//    // draw text on screen
-//    double FontWidth = 0.02;
-//    double GLPosX, GLPosY, GLPosZ;
-//    WinPosToWorldPos(WinPosX, WinPosY, 0, &GLPosX, &GLPosY, &GLPosZ);
-//
-//    glColor3f(Color[R], Color[G], Color[B]);
-//
-//    int len = (int)strlen(strMsg);
-//    glRasterPost3d(GLPosX, GLPosY, GLPosZ);
-//    
-//    for (int i = 0; i < len; i++) {
-//        glutBitmapCharacter(font, strMsg[i]);
-//    }
-// }
+
 
 GLvoid Reshape(int w, int h) {
     glViewport(0, 0, w, h);
