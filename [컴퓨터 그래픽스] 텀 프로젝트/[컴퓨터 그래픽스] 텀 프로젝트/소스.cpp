@@ -91,9 +91,10 @@ struct Shape {
     Vector3 scale;
     Vector3 pos;
     Vector3 dir;
+    float radius;
 
     Vector4 GetBB() {
-        return Vector4(pos.x - 1.5, pos.z - 1.5, pos.x + 1.5, pos.z + 1.5);
+        return Vector4(pos.x - radius, pos.z - radius, pos.x + radius, pos.z + radius);
     }
 
     Shape() {
@@ -460,7 +461,6 @@ void DrawPlayer()
     glm::mat4 Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(180 - (angle + deltaAngle) * 180.0 / 3.14)), glm::vec3(0.0, 1.0, 0.0));
     STR = S * Ry;
 
-
     //glRotatef(180 - (angle + deltaAngle) * 180.0 / 3.14, 0.0, 1.0, 0.0);
 
     glm::mat4 cubeSTR = glm::mat4(1.0f);
@@ -489,7 +489,7 @@ void get_bb(Vector4 vec) {
 // 큐브 그리기 함수 -> 맵 그릴 때 사용
 void DrawCube(Shape shape)
 {
-    get_bb(shape.GetBB());
+    // get_bb(shape.GetBB());
     glm::mat4 S = glm::mat4(1.0f);
     glm::mat4 T = glm::mat4(1.0f);
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
@@ -595,6 +595,7 @@ void DrawBoard()
                 break;
             case BOARD_TYPE::WALL:
             case BOARD_TYPE::FIXED_WALL:
+                get_bb(boardShape[i][j].GetBB());
                 DrawCube(boardShape[i][j]);
                 Draw2ndCube(boardShape[i][j]);
                 break;
@@ -900,8 +901,9 @@ int Loadfile(int mapCollect)
 
                 if (boardShape[i][j].type == ITEM) {
                     boardShape[i][j].color = Vector3(Yellow.r, Yellow.g, Yellow.b);
-                    boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
-                    boardShape[i][j].pos = Vector3((i * 6.5f - 35), 0, (j * 6.5f - 35));
+                    boardShape[i][j].scale = Vector3(1.0, 1.0, 1.0);
+                    boardShape[i][j].pos = Vector3((i * 7.5f - 35), 0, (j * 7.5f - 35));
+                    boardShape[i][j].radius = 1.0f;
                     //if (i < SIZE / 2 && j < SIZE / 2) {
                     //    boardShape[i][j].pos = Vector3((i * 15.0f - 25), 0, (j * 15.0f - 25));
                     //    boardShape[i][j].bb = Vector4((i * 14.0f - 25), (j * 14.0f - 25), (i * 16.0f - 25), (j * 16.0f - 25));
@@ -920,8 +922,9 @@ int Loadfile(int mapCollect)
                     //}
                 }
                 else {
+                    boardShape[i][j].pos = Vector3((i * 7.5f - 35), 0, (j * 7.5f - 35));
+                    boardShape[i][j].radius = 1.0f;
                     boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
-                    boardShape[i][j].pos = Vector3((i * 6.5f - 35), 0, (j * 6.5f - 35));
 
                     if (boardShape[i][j].type == FIXED_WALL) {
                         boardShape[i][j].color = Vector3(0.7, 0.7, 0.7);
