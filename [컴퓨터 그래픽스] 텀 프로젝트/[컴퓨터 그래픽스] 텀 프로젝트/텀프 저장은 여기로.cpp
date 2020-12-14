@@ -32,6 +32,8 @@
 #define MAP_5 "MAP_5.txt"
 #define INIT "MAP_1.txt"
 
+#define SHAPE_SIZE 0.5f // Enemy size
+
 #define SIZE 22 // 맵 사이즈
 using namespace std;
 
@@ -58,6 +60,7 @@ void throw_bomb();
 void DrawPlayer();
 void DrawCube();
 void DrawEnemy();
+void make_enemy_pos();
 
 GLUquadricObj* qobj;
 
@@ -70,6 +73,8 @@ GLuint vertexshader, lineVertexShader, fragmentshader;
 GLuint VAO[10], VBO[10];
 GLuint VAOCube[7], VBOCube[7];
 
+unsigned int texture[10];
+
 ///////////////////////////////////////////////////////////////
 // 맵 파일 입출력
 GLubyte* LoadDIBitmap(const char* filename, BITMAPINFO** info);
@@ -80,8 +85,6 @@ void initTextures();
 
 int mapCollect = 0;
 float colorbuffer[4][3] = { 0 };
-
-unsigned int texture;
 
 struct Vector3 {
     float x;
@@ -173,6 +176,10 @@ float player_xpos = 0.0f;
 float player_ypos = 0.0f;
 float player_zpos = 20.0f;
 
+float enemy_xpos;
+float enemy_ypos = 0.0f;
+float enemy_zpos = -30.0f;
+
 bool robot_default_move = true;
 
 float Proj_degree = 50.0f;
@@ -188,6 +195,7 @@ int cameraAngleDirectionY = 1;
 
 bool threed_mode = true;    // 시점 변환
 bool bomb_mode = false;     // 폭탄 던지기
+bool enemy_valid = false;    // enemy 살아있는지
 
 // time
 float delta_time = 0.0f;
@@ -205,6 +213,11 @@ float lastY = HEIGHT / 2.0f;
 
 float bomb_z_pos = player_zpos - 5.0;
 
+// 충돌체크를 위한 radius 선언
+float player_radius = 1.0f;
+float enemy_radius = 0.75f;
+float bomb_radius = 0.3f;
+
 float Background[] = {
     -1.0,1.0,-1.0, 0.0,1.0,0.0, 1.0,1.0,
     -1.0,-1.0,-1.0, 0.0,1.0,0.0, 1.0,0.0,
@@ -215,13 +228,78 @@ float Background[] = {
     1.0,1.0,-1.0, 0.0,1.0,0.0, 0.0,1.0
 };
 
+float RecF[] = {
+
+    //앞
+    -SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.0f,1.0f,0.0f,  0.0,1.0,//6
+    -SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.0f,0.0f,0.5f, 0.0,0.0,//8
+     SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.5f,  1.0,1.0,//5
+
+     SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.5f,  1.0,1.0,//5
+     -SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.0f,0.0f,0.5f, 0.0,0.0,//8
+      SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.0f,  1.0,0.0//7
+};
+
+float RecR[] = {
+    //오
+     SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 1.0f,0.0f,0.0f, 1.0,1.0,//5
+     SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 1.0f,0.0f,0.0f, 0.0,0.0,//3
+    SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.5f, 0.0,1.0,//1
+
+
+     SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.5f,  1.0,1.0,//5
+     SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.0f, 1.0,0.0,//7
+    SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 1.0f,0.0f,1.0f, 0.0,0.0//3
+};
+float RecL[] = {
+    //왼
+    -SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.0f,1.0f,0.0f, 0.0,1.0,//6
+    -SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.0f,1.0f,0.0f, 1.0,1.0,//2
+    -SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.0f,0.0f,0.5f, 0.0,0.0,//8
+
+     -SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.0f,1.0f,0.0f, 1.0,1.0,//2
+     -SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.0f,0.25f,0.25f,1.0,0.0,//4
+      -SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.0f,0.0f,0.5f, 0.0,0.0//8
+};
+
+float RecT[] = {
+
+    //위
+     -SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.0f,1.0f,0.0f,  1.0,0.0,//6
+     SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.5f, 0.0,0.0,//5
+      SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.5f, 0.0,1.0,//1
+
+
+      -SHAPE_SIZE,SHAPE_SIZE,SHAPE_SIZE, 0.0f,1.0f,0.0f, 1.0,0.0,//6
+      SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.5f, 0.0,1.0,//1
+      -SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.0f,1.0f,1.0f, 1.0,1.0//2
+};
+
+float RecD[] = {
+    //아래
+-SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.0f,0.0f,0.5f, 0.0,1.0,//8
+SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.0f,  1.0,0.0,//3
+SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.5f,0.0f,0.0f,   1.0,1.0,//7
+
+ -SHAPE_SIZE,-SHAPE_SIZE,SHAPE_SIZE, 0.0f,0.0f,0.5f, 0.0,1.0,//8
+  -SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.0f,0.25f,0.25f, 0.0,0.0,//4
+  SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.25f, 1.0,0.0//3
+};
+
+float RecB[] = {
+    //뒤
+-SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.0f,1.0f,1.0f, 1.0,1.0,//2
+SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.0f, 0.0,0.0,//3
+-SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.5f,0.5f,0.25f, 1.0,0.0,//4
+
+ -SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 0.0f,1.0f,1.0f, 1.0,1.0,//2
+ SHAPE_SIZE,SHAPE_SIZE,-SHAPE_SIZE, 1.0f,0.0f,0.0f, 0.0,1.0,//1
+ SHAPE_SIZE,-SHAPE_SIZE,-SHAPE_SIZE, 0.0f,0.0f,1.0f, 0.0,0.0//3
+};
+
 std::vector< glm::vec3 > robot_vertices;
 std::vector< glm::vec2 > robot_uvs;
 std::vector< glm::vec3 > robot_normals;
-
-std::vector< glm::vec3 > bottom_vertices;
-std::vector< glm::vec2 > bottom_uvs;
-std::vector< glm::vec3 > bottom_normals;
 
 std::vector< glm::vec3 > cube_vertices;
 std::vector< glm::vec2 > cube_uvs;
@@ -351,6 +429,7 @@ glm::mat4 STR = glm::mat4(1.0f);
 glm::mat4 Bomb_STR = glm::mat4(1.0f);
 glm::mat4 Robot_STR = glm::mat4(1.0f);
 glm::mat4 cubeSTR = glm::mat4(1.0f);
+glm::mat4 EnemySTR = glm::mat4(1.0f);
 glm::mat4 view = glm::mat4(1.0f);
 
 void main(int argc, char** argv) {
@@ -389,9 +468,11 @@ void main(int argc, char** argv) {
 // 플레이어 그리기 함수
 void DrawPlayer()
 {
-    S = glm::scale(glm::mat4(1.0f), glm::vec3(0.7, 0.7, 0.7));
-    Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(180.0f)), glm::vec3(0.0, 1.0, 0.0));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3((float)player_xpos, (float)player_ypos, (float)player_zpos));
+    glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(0.7, 0.7, 0.7));
+    glm::mat4 Ry = glm::rotate(glm::mat4(1.0f), float(glm::radians(180.0f)), glm::vec3(0.0, 1.0, 0.0));
+    STR = S * Ry;
+
+    glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3((float)player_xpos, (float)player_ypos, (float)player_zpos));
     cubeSTR = S * T * Ry;
     unsigned int Player = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(Player, 1, GL_FALSE, glm::value_ptr(cubeSTR));
@@ -423,13 +504,24 @@ void DrawCube(Shape shape)
     glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
 }
 
-//void DrawEnemy() {
-//    glBindVertexArray(vao[1]);
-//    glActiveTexture(GL_TEXTURE0);
-//    glBindTexture(GL_TEXTURE_2D, texture[0]);
-//    glDrawArrays(GL_TRIANGLES, 0, 6);
-//}
+void DrawEnemy() {
+    //glBindVertexArray(vao[1]);
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_2D, texture[0]);
+    //glDrawArrays(GL_TRIANGLES, 0, 6);
 
+    glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(1.5, 1.5, 1.5));
+    glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3(enemy_xpos, enemy_ypos, enemy_zpos));
+    EnemySTR = S * T;
+
+    unsigned int transformEnemy = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(transformEnemy, 1, GL_FALSE, glm::value_ptr(EnemySTR));
+    unsigned int colorEnemy = glGetUniformLocation(s_program[1], "in_Color");
+    glUniform3f(colorEnemy, Yellow.r, Yellow.g, Yellow.b);
+
+    glBindVertexArray(VAO[0]);
+    glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
+}
 
 void DrawBoard()
 {
@@ -482,6 +574,10 @@ void drawScene()
 
     //DrawBoard();
     DrawPlayer();
+
+    if (enemy_valid) {
+        DrawEnemy();
+    }
 
     // 폭탄
     if (bomb_mode) {
@@ -538,8 +634,38 @@ void Keyboard(unsigned char key, int x, int y) {
         // 일단 보이는것만.. b로 구현함 ㅠㅠ
         bomb_mode = true;
         break;
+    case 'e':
+        random_xpos = random_pos_urd(dre);
+        enemy_xpos = random_xpos;
+        enemy_valid = true;
+        break;
     }
     glutPostRedisplay();
+}
+
+void TimerFunction(int value) {
+    if (bomb_mode) {
+        if (bomb_z_pos > -50) {
+            bomb_z_pos -= 0.3f;
+            // 충돌체크 여기다 해주면 됨
+        }
+        else {
+            bomb_z_pos = player_zpos - 5.0f;
+            bomb_mode = false;
+        }
+    }
+
+    if (enemy_valid) {
+        // 임시 충돌체크
+        if (enemy_zpos <= (player_zpos - 5.0)) {
+            enemy_zpos += 0.5f;
+        }
+        else {
+            enemy_zpos = -30.0f;
+            enemy_valid = false;
+        }
+    }
+    glutTimerFunc(10, TimerFunction, 1);
 }
 
 // 카메라 시점 변환시 사용하는 마우스 콜백 함수
@@ -591,18 +717,6 @@ void Mouse(int button, int state, int x, int y) {
 }
 
 
-void TimerFunction(int value) {
-    if (bomb_mode) {
-        if (bomb_z_pos > -30)
-            bomb_z_pos -= 0.5f;
-        else {
-            bomb_z_pos = player_zpos - 5.0f;
-            bomb_mode = false;
-        }
-    }
-    glutTimerFunc(10, TimerFunction, 1);
-}
-
 // 잔여 HP 표현하는 delta_time 얻는 함수
 void get_time() {
     float currentFrame = glutGet(GLUT_ELAPSED_TIME);
@@ -611,7 +725,6 @@ void get_time() {
 }
 
 // 폭탄
-
 void throw_bomb() {
     qobj = gluNewQuadric();
     glm::vec3 bomb_pos = glm::vec3(player_xpos, 0.0f, bomb_z_pos);
@@ -627,6 +740,10 @@ void throw_bomb() {
     CalculateLight(bomb_pos.x, bomb_pos.y, bomb_pos.z, 1.0);
 
     gluSphere(qobj, 0.5, 20, 20);
+}
+
+void get_bb() {
+
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -747,7 +864,7 @@ void make_fragmentShader()
     if (!result)
     {
         glGetShaderInfoLog(fragmentshader, 512, NULL, errorLog);
-        std::cerr << "ERROR:vertex shader 컴파일 실패\n" << errorLog << std::endl;
+        std::cerr << "ERROR:fragment shader 컴파일 실패\n" << errorLog << std::endl;
         return;
     }
 }
@@ -764,7 +881,7 @@ GLuint make_shaderProgram() {
     GLchar errorLog[512];
     glGetProgramiv(Shaders_program, GL_LINK_STATUS, &result);
     if (!result) {
-        cerr << "ERROR: shader program 연결실패\n" << errorLog << endl;
+        cerr << "ERROR:shader program 연결실패\n" << errorLog << endl;
         return false;
     }
     glUseProgram(Shaders_program);
@@ -791,15 +908,78 @@ void InitBuffer()
 
     // 로봇
     glBindVertexArray(VAO[1]);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
     glBufferData(GL_ARRAY_BUFFER, robot_vertices.size() * sizeof(glm::vec3), &robot_vertices[0], GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
     glBufferData(GL_ARRAY_BUFFER, robot_normals.size() * sizeof(glm::vec3), &robot_normals[0], GL_STATIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
+
+    // 	
+    /*glBindVertexArray(VAO[2]);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(RecF), RecF, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    glBindVertexArray(VAO[3]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(RecR), RecR, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    glBindVertexArray(VAO[4]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[4]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(RecL), RecL, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    glBindVertexArray(VAO[5]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[5]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(RecT), RecT, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    glBindVertexArray(VAO[6]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[6]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(RecD), RecD, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    glBindVertexArray(VAO[7]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[7]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(RecB), RecB, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);*/
 }
 
 void InitShader() {
@@ -819,92 +999,92 @@ void InitShader() {
     }
 }
 
-//void InitTexture()
-//{
-//    int width[10], height[10], nrChannels[10];
-//    stbi_set_flip_vertically_on_load(true);
-//    //BITMAPINFO* bmp;
-//    //--- texture 1
-//    glGenTextures(1, &texture[0]);
-//    glBindTexture(GL_TEXTURE_2D, texture[0]);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//
-//    unsigned char* data1 = stbi_load("1.bmp", &width[0], &height[0], &nrChannels[0], 0);
-//
-//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width[0], height[0], 0, GL_RGB, GL_UNSIGNED_BYTE, data1);
-//    glGenerateMipmap(GL_TEXTURE_2D);
-//    //glUseProgram(s_program);
-//    //int tLocation1 = glGetUniformLocation(s_program, "exTexture");
-//    //glUniform1i(tLocation1, 0);
-//    stbi_image_free(data1);
-//
-//
-//    //--- texture 2
-//    glGenTextures(1, &texture[1]);
-//    glBindTexture(GL_TEXTURE_2D, texture[1]);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//    stbi_set_flip_vertically_on_load(true);
-//    unsigned char* data2 = stbi_load("2.bmp", &width[1], &height[1], &nrChannels[1], 0);
-//
-//    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[1], height[1], 0, GL_RGB, GL_UNSIGNED_BYTE, data2);
-//    stbi_image_free(data2);
-//
-//    //--- texture 3
-//    glGenTextures(1, &texture[2]);
-//    glBindTexture(GL_TEXTURE_2D, texture[2]);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//    stbi_set_flip_vertically_on_load(true);
-//    unsigned char* data3 = stbi_load("3.bmp", &width[2], &height[2], &nrChannels[2], 0);
-//
-//    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[2], height[2], 0, GL_RGB, GL_UNSIGNED_BYTE, data3);
-//    stbi_image_free(data3);
-//    //--- texture 3
-//    glGenTextures(1, &texture[3]);
-//    glBindTexture(GL_TEXTURE_2D, texture[3]);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//    stbi_set_flip_vertically_on_load(true);
-//    unsigned char* data4 = stbi_load("4.bmp", &width[3], &height[3], &nrChannels[3], 0);
-//
-//    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[3], height[3], 0, GL_RGB, GL_UNSIGNED_BYTE, data4);
-//    stbi_image_free(data4);
-//
-//    glGenTextures(1, &texture[4]);
-//    glBindTexture(GL_TEXTURE_2D, texture[4]);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//    //stbi_set_flip_vertically_on_load(true);
-//    unsigned char* data5 = stbi_load("5.bmp", &width[4], &height[4], &nrChannels[4], 0);
-//
-//    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[4], height[4], 0, GL_RGB, GL_UNSIGNED_BYTE, data5);
-//    stbi_image_free(data5);
-//
-//
-//    glGenTextures(1, &texture[5]);
-//    glBindTexture(GL_TEXTURE_2D, texture[5]);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//    //stbi_set_flip_vertically_on_load(true);
-//    unsigned char* data6 = stbi_load("6.bmp", &width[5], &height[5], &nrChannels[5], 0);
-//
-//    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[5], height[5], 0, GL_RGB, GL_UNSIGNED_BYTE, data6);
-//    stbi_image_free(data6);
-//}
+void InitTexture()
+{
+    int width[10], height[10], nrChannels[10];
+    stbi_set_flip_vertically_on_load(true);
+    //BITMAPINFO* bmp;
+    //--- texture 1
+    glGenTextures(1, &texture[0]);
+    glBindTexture(GL_TEXTURE_2D, texture[0]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    unsigned char* data1 = stbi_load("1.bmp", &width[0], &height[0], &nrChannels[0], 0);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width[0], height[0], 0, GL_RGB, GL_UNSIGNED_BYTE, data1);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    //glUseProgram(s_program);
+    //int tLocation1 = glGetUniformLocation(s_program, "exTexture");
+    //glUniform1i(tLocation1, 0);
+    stbi_image_free(data1);
+
+
+    //--- texture 2
+    glGenTextures(1, &texture[1]);
+    glBindTexture(GL_TEXTURE_2D, texture[1]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* data2 = stbi_load("2.bmp", &width[1], &height[1], &nrChannels[1], 0);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[1], height[1], 0, GL_RGB, GL_UNSIGNED_BYTE, data2);
+    stbi_image_free(data2);
+
+    //--- texture 3
+    glGenTextures(1, &texture[2]);
+    glBindTexture(GL_TEXTURE_2D, texture[2]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* data3 = stbi_load("3.bmp", &width[2], &height[2], &nrChannels[2], 0);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[2], height[2], 0, GL_RGB, GL_UNSIGNED_BYTE, data3);
+    stbi_image_free(data3);
+    //--- texture 3
+    glGenTextures(1, &texture[3]);
+    glBindTexture(GL_TEXTURE_2D, texture[3]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* data4 = stbi_load("4.bmp", &width[3], &height[3], &nrChannels[3], 0);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[3], height[3], 0, GL_RGB, GL_UNSIGNED_BYTE, data4);
+    stbi_image_free(data4);
+
+    glGenTextures(1, &texture[4]);
+    glBindTexture(GL_TEXTURE_2D, texture[4]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //stbi_set_flip_vertically_on_load(true);
+    unsigned char* data5 = stbi_load("5.bmp", &width[4], &height[4], &nrChannels[4], 0);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[4], height[4], 0, GL_RGB, GL_UNSIGNED_BYTE, data5);
+    stbi_image_free(data5);
+
+
+    glGenTextures(1, &texture[5]);
+    glBindTexture(GL_TEXTURE_2D, texture[5]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //stbi_set_flip_vertically_on_load(true);
+    unsigned char* data6 = stbi_load("6.bmp", &width[5], &height[5], &nrChannels[5], 0);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, width[5], height[5], 0, GL_RGB, GL_UNSIGNED_BYTE, data6);
+    stbi_image_free(data6);
+}
 
 // 조명 계산
 void CalculateLight(float lgt_x, float lgt_y, float lgt_z, float amb) {
