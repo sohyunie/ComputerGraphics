@@ -1188,6 +1188,7 @@ void InitTexture()
     glTexImage2D(GL_TEXTURE_2D, 0, 3, width[2], height[2], 0, GL_RGB, GL_UNSIGNED_BYTE, data3);
     stbi_image_free(data3);
     //--- texture 3
+    //
     glGenTextures(1, &texture[3]);
     glBindTexture(GL_TEXTURE_2D, texture[3]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
