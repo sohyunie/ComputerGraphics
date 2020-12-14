@@ -34,8 +34,22 @@
 
 #define SHAPE_SIZE 0.5f // Enemy size
 
+<<<<<<< HEAD
 #define SIZE 31 // 맵 사이즈
+=======
+#define SIZE 22 // 맵 사이즈
+#define MONSTER_SIZE 10
+>>>>>>> fdaac906f52e8986ddba58df21a116ed9e25f24b
 using namespace std;
+
+normal_distribution <float>uid_mColor{ 0.0,1.0 };
+normal_distribution <float>uid_mDir{ -1.0 ,1.0 };
+normal_distribution <float>uid_mPos{ -10.0 ,10.0 };
+
+
+default_random_engine dre((size_t)time(NULL));
+
+const float BOMB_TIME = 3.0;
 
 struct Vector3 {
     float x;
@@ -80,7 +94,11 @@ struct Shape {
     Vector3 color;
     Vector3 scale;
     Vector3 pos;
+<<<<<<< HEAD
     Vector4 bb;
+=======
+    Vector3 dir;
+>>>>>>> fdaac906f52e8986ddba58df21a116ed9e25f24b
 
     Shape() {
         return;
@@ -100,7 +118,6 @@ GLvoid Reshape(int, int);
 void drawScene();
 void TimerFunction(int);
 void Keyboard(unsigned char, int, int);
-void Mouse(int, int, int, int);
 void CalculateLight(float, float, float, float);
 int Loadfile(int mapCollect);
 void DrawBoard();
@@ -113,6 +130,7 @@ void DrawCube();
 void Draw2ndCube();
 void DrawEnemy();
 void DrawKey();
+void InitMonster();
 
 void SpecialKeyboard(int key, int x, int y); //키보드 조종
 void Keyboard(unsigned char Key, int x, int y); // 키보드 조종2
@@ -143,6 +161,7 @@ int mapCollect = 0;
 float colorbuffer[4][3] = { 0 };
 
 Shape boardShape[SIZE][SIZE];
+Shape monster[MONSTER_SIZE];
 
 float objectSize = 1;
 bool isChanged = false;
@@ -184,7 +203,7 @@ float light_g = 1.0;
 float light_b = 1.0;
 
 random_device rd;
-default_random_engine dre{ rd() };
+//default_random_engine dre{ rd() };
 uniform_real_distribution<> random_pos_urd{ -15.0, 15.0 };
 
 float random_xpos = random_pos_urd(dre);
@@ -201,6 +220,8 @@ float player_ypos = 0.0f;
 float player_zpos = 20.0f;
 
 Vector3 cameraDir = Vector3();
+
+Shape bombShape = Shape();
 
 float enemy_xpos;
 float enemy_ypos = 0.0f;
@@ -418,6 +439,7 @@ void main(int argc, char** argv) {
 
 
     Loadfile(1);
+    InitMonster();
     InitBuffer();
     InitShader();
     InitTexture();
@@ -427,7 +449,10 @@ void main(int argc, char** argv) {
 
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
+<<<<<<< HEAD
     //glutMouseFunc(Mouse);
+=======
+>>>>>>> fdaac906f52e8986ddba58df21a116ed9e25f24b
     glutKeyboardFunc(Keyboard);
     glutSpecialFunc(SpecialKeyboard);
     glutSpecialUpFunc(releaseKey);
@@ -584,6 +609,33 @@ void computeDir(float deltaAngle) {
     lz = -cos(angle);
 }
 
+void DrawMonster(Shape monster) {
+    glm::mat4 monsterSTR = glm::mat4(1.0f);
+    qobj = gluNewQuadric();
+    glm::vec3 monsterPos = glm::vec3(monster.pos.x, monster.pos.y, monster.pos.z);
+    S = glm::scale(glm::mat4(1.0f), glm::vec3(4,4,4));
+    T = glm::translate(glm::mat4(1.0f), monsterPos);
+    monsterSTR = S * T;
+    unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(monsterSTR));
+
+    unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
+    glUniform3f(Color_Bomb, monster.color.x, monster.color.y, monster.color.z);
+
+    CalculateLight(monsterPos.x, monsterPos.y, monsterPos.z, 1.0);
+
+    gluSphere(qobj, 1.0, 20, 20);
+}
+
+void InitMonster() {
+    for (int i = 0; i < MONSTER_SIZE; i++) {
+        monster[i].pos = Vector3(uid_mPos(dre), 1.0f, uid_mPos(dre));
+        monster[i].color = Vector3(uid_mColor(dre), uid_mColor(dre), uid_mColor(dre));
+        monster[i].dir = Vector3(uid_mDir(dre), 0.0f, uid_mDir(dre));
+    }
+}
+
+
 void drawScene()
 {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -595,23 +647,6 @@ void drawScene()
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     CalculateLight(light_x, light_y, light_z, 0.5);
-
-    //// 시점
-    //if (!threed_mode) {
-    //    view = glm::lookAt(cameraPosM, cameraPosM + cameraFront, cameraUp);
-    //    GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
-    //    glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
-    //}
-    //else {
-    //    view = glm::lookAt(cameraPos3, cameraDirection, cameraUp);
-    //    GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
-    //    glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
-    //}
-
-    //glm::mat4 projection = glm::mat4(1.0f);
-    //projection = glm::perspective(glm::radians(fov), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
-    //GLuint Projectionlocation = glGetUniformLocation(s_program[0], "Projection");
-    //glUniformMatrix4fv(Projectionlocation, 1, GL_FALSE, value_ptr(projection));
 
     if (deltaAngle)
         computeDir(deltaAngle);
@@ -625,16 +660,24 @@ void drawScene()
         dir = Vector3(player_xpos + lx * 100, player_ypos + ly, player_zpos + lz * 100);
     else {
         dir = Vector3(player_xpos + lx, player_ypos + ly, player_zpos + lz);
-        yPos *= 10;
+        yPos *= 20;
     }
+<<<<<<< HEAD
 
+=======
+ 
+>>>>>>> fdaac906f52e8986ddba58df21a116ed9e25f24b
     CameraSetting(s_program[0], Vector3(player_xpos, player_ypos, player_zpos), dir, yPos);
     DrawBoard();
     DrawPlayer();
 
-    if (enemy_valid) {
-        DrawEnemy();
+    for (int i = 0; i < MONSTER_SIZE; i++) {
+        DrawMonster(monster[i]);
     }
+
+    //if (enemy_valid) {
+    //    DrawEnemy();
+    //}
 
     // 폭탄
     if (bomb_mode) {
@@ -705,7 +748,11 @@ void Keyboard(unsigned char key, int x, int y) {
         break;
     case 'b':
         // 일단 보이는것만.. b로 구현함 ㅠㅠ
-        bomb_mode = true;
+        if (!bomb_mode) {
+            bombShape.pos = Vector3(player_xpos, player_ypos, player_zpos);
+            bombShape.dir = Vector3(lx, ly, lz);
+            bomb_mode = true;
+        }
         break;
     case 'e':
         random_xpos = random_pos_urd(dre);
@@ -736,28 +783,35 @@ void SpecialKeyboard(int key, int xx, int yy)
     glutPostRedisplay();
 }
 
+float elapsedTime;
 void TimerFunction(int value) {
     if (bomb_mode) {
-        if (bomb_z_pos > -50) {
-            bomb_z_pos -= 0.3f;
-            // 충돌체크 여기다 해주면 됨
+        if (elapsedTime > 0) {
+            elapsedTime -= 0.1f;
+            bombShape.pos.x += bombShape.dir.x;
+            bombShape.pos.z += bombShape.dir.z;
+            // TODO : 충돌체크 여기다 해주면 됨
         }
         else {
-            bomb_z_pos = player_zpos - 5.0f;
+            elapsedTime = BOMB_TIME;
             bomb_mode = false;
         }
     }
-
-    if (enemy_valid) {
-        // 임시 충돌체크
-        if (enemy_zpos <= (player_zpos - 5.0)) {
-            enemy_zpos += 0.5f;
-        }
-        else {
-            enemy_zpos = -30.0f;
-            enemy_valid = false;
-        }
+    for (int i = 0; i < MONSTER_SIZE; ++i) {
+        monster[i].pos.x += 0.01 * monster[i].dir.x;
+        monster[i].pos.z += 0.01 * monster[i].dir.z;
     }
+
+    //if (enemy_valid) {
+    //    // 임시 충돌체크
+    //    if (enemy_zpos <= (player_zpos - 5.0)) {
+    //        enemy_zpos += 0.5f;
+    //    }
+    //    else {
+    //        enemy_zpos = -30.0f;
+    //        enemy_valid = false;
+    //    }
+    //}
     glutTimerFunc(10, TimerFunction, 1);
 }
 
@@ -769,9 +823,12 @@ void get_time() {
 }
 
 // 폭탄
+
+
+// 폭탄
 void throw_bomb() {
     qobj = gluNewQuadric();
-    glm::vec3 bomb_pos = glm::vec3(player_xpos, 0.0f, bomb_z_pos);
+    glm::vec3 bomb_pos = glm::vec3(bombShape.pos.x, bombShape.pos.y, bombShape.pos.z);
     S = glm::scale(glm::mat4(1.0f), glm::vec3(1.0, 1.0, 1.0));
     T = glm::translate(glm::mat4(1.0f), bomb_pos);
     Bomb_STR = S * T;
@@ -881,7 +938,6 @@ int Loadfile(int mapCollect)
     return 1;
 }
 
-// 이젠 맵을 그릴거예요
 
 float obj_rot = 0;
 
@@ -1133,6 +1189,7 @@ void InitTexture()
     glTexImage2D(GL_TEXTURE_2D, 0, 3, width[2], height[2], 0, GL_RGB, GL_UNSIGNED_BYTE, data3);
     stbi_image_free(data3);
     //--- texture 3
+    //
     glGenTextures(1, &texture[3]);
     glBindTexture(GL_TEXTURE_2D, texture[3]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
