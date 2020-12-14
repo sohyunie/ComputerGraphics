@@ -36,6 +36,7 @@
 
 #define SIZE 22 // 맵 사이즈
 using namespace std;
+const float BOMB_TIME = 3.0;
 
 struct Vector3 {
     float x;
@@ -63,6 +64,7 @@ struct Shape {
     Vector3 color;
     Vector3 scale;
     Vector3 pos;
+    Vector3 dir;
 
     Shape() {
         return;
@@ -82,7 +84,6 @@ GLvoid Reshape(int, int);
 void drawScene();
 void TimerFunction(int);
 void Keyboard(unsigned char, int, int);
-void Mouse(int, int, int, int);
 void CalculateLight(float, float, float, float);
 int Loadfile(int mapCollect);
 void DrawBoard();
@@ -183,6 +184,8 @@ float player_ypos = 0.0f;
 float player_zpos = 20.0f;
 
 Vector3 cameraDir = Vector3();
+
+Shape bombShape = Shape();
 
 float enemy_xpos;
 float enemy_ypos = 0.0f;
@@ -478,7 +481,6 @@ void main(int argc, char** argv) {
 
     glutDisplayFunc(drawScene);
     glutReshapeFunc(Reshape);
-    glutMouseFunc(Mouse);
     glutKeyboardFunc(Keyboard);
     glutSpecialFunc(SpecialKeyboard);
     glutSpecialUpFunc(releaseKey);
@@ -752,7 +754,11 @@ void Keyboard(unsigned char key, int x, int y) {
         break;
     case 'b':
         // 일단 보이는것만.. b로 구현함 ㅠㅠ
-        bomb_mode = true;
+        if (!bomb_mode) {
+            bombShape.pos = Vector3(player_xpos, player_ypos, player_zpos);
+            bombShape.dir = Vector3(lx, ly, lz);
+            bomb_mode = true;
+        }
         break;
     case 'e':
         random_xpos = random_pos_urd(dre);
@@ -783,14 +789,17 @@ void SpecialKeyboard(int key, int xx, int yy)
     glutPostRedisplay();
 }
 
+float elapsedTime;
 void TimerFunction(int value) {
     if (bomb_mode) {
-        if (bomb_z_pos > -50) {
-            bomb_z_pos -= 0.3f;
-            // 충돌체크 여기다 해주면 됨
+        if (elapsedTime > 0) {
+            elapsedTime -= 0.1f;
+            bombShape.pos.x += bombShape.dir.x;
+            bombShape.pos.z += bombShape.dir.z;
+            // TODO : 충돌체크 여기다 해주면 됨
         }
         else {
-            bomb_z_pos = player_zpos - 5.0f;
+            elapsedTime = BOMB_TIME;
             bomb_mode = false;
         }
     }
@@ -818,7 +827,7 @@ void get_time() {
 // 폭탄
 void throw_bomb() {
     qobj = gluNewQuadric();
-    glm::vec3 bomb_pos = glm::vec3(player_xpos, 0.0f, bomb_z_pos);
+    glm::vec3 bomb_pos = glm::vec3(bombShape.pos.x, bombShape.pos.y, bombShape.pos.z);
     S = glm::scale(glm::mat4(1.0f), glm::vec3(1.0, 1.0, 1.0));
     T = glm::translate(glm::mat4(1.0f), bomb_pos);
     Bomb_STR = S * T;
