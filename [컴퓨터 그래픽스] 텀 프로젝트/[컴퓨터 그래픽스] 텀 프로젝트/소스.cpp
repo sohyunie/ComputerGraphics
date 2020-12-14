@@ -35,7 +35,16 @@
 #define SHAPE_SIZE 0.5f // Enemy size
 
 #define SIZE 22 // ∏  ªÁ¿Ã¡Ó
+#define MONSTER_SIZE 10
 using namespace std;
+
+normal_distribution <float>uid_mColor{ 0.0,1.0 };
+normal_distribution <float>uid_mDir{ -1.0 ,1.0 };
+normal_distribution <float>uid_mPos{ -10.0 ,10.0 };
+
+
+default_random_engine dre((size_t)time(NULL));
+
 const float BOMB_TIME = 3.0;
 
 struct Vector3 {
@@ -96,6 +105,7 @@ void DrawCube();
 void Draw2ndCube();
 void DrawEnemy();
 void DrawKey();
+void InitMonster();
 
 void SpecialKeyboard(int key, int x, int y); //≈∞∫∏µÂ ¡∂¡æ
 void Keyboard(unsigned char Key, int x, int y); // ≈∞∫∏µÂ ¡∂¡æ2
@@ -126,6 +136,7 @@ int mapCollect = rand() % 4;
 float colorbuffer[4][3] = { 0 };
 
 Shape boardShape[SIZE][SIZE];
+Shape monster[MONSTER_SIZE];
 
 float objectSize = 1;
 bool isChanged = false;
@@ -167,7 +178,7 @@ float light_g = 1.0;
 float light_b = 1.0;
 
 random_device rd;
-default_random_engine dre{ rd() };
+//default_random_engine dre{ rd() };
 uniform_real_distribution<> random_pos_urd{ -15.0, 15.0 };
 
 float random_xpos = random_pos_urd(dre);
@@ -472,6 +483,7 @@ void main(int argc, char** argv) {
 
 
     Loadfile(1);
+    InitMonster();
     InitBuffer();
     InitShader();
     InitTexture();
@@ -625,6 +637,33 @@ void computeDir(float deltaAngle) {
     lz = -cos(angle);
 }
 
+void DrawMonster(Shape monster) {
+    glm::mat4 monsterSTR = glm::mat4(1.0f);
+    qobj = gluNewQuadric();
+    glm::vec3 monsterPos = glm::vec3(monster.pos.x, monster.pos.y, monster.pos.z);
+    S = glm::scale(glm::mat4(1.0f), glm::vec3(4,4,4));
+    T = glm::translate(glm::mat4(1.0f), monsterPos);
+    monsterSTR = S * T;
+    unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(monsterSTR));
+
+    unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
+    glUniform3f(Color_Bomb, monster.color.x, monster.color.y, monster.color.z);
+
+    CalculateLight(monsterPos.x, monsterPos.y, monsterPos.z, 1.0);
+
+    gluSphere(qobj, 1.0, 20, 20);
+}
+
+void InitMonster() {
+    for (int i = 0; i < MONSTER_SIZE; i++) {
+        monster[i].pos = Vector3(uid_mPos(dre), 1.0f, uid_mPos(dre));
+        monster[i].color = Vector3(uid_mColor(dre), uid_mColor(dre), uid_mColor(dre));
+        monster[i].dir = Vector3(uid_mDir(dre), 0.0f, uid_mDir(dre));
+    }
+}
+
+
 void drawScene()
 {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -636,23 +675,6 @@ void drawScene()
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     CalculateLight(light_x, light_y, light_z, 0.5);
-
-    //// Ω√¡°
-    //if (!threed_mode) {
-    //    view = glm::lookAt(cameraPosM, cameraPosM + cameraFront, cameraUp);
-    //    GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
-    //    glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
-    //}
-    //else {
-    //    view = glm::lookAt(cameraPos3, cameraDirection, cameraUp);
-    //    GLuint viewlocation = glGetUniformLocation(s_program[0], "View");
-    //    glUniformMatrix4fv(viewlocation, 1, GL_FALSE, value_ptr(view));
-    //}
-
-    //glm::mat4 projection = glm::mat4(1.0f);
-    //projection = glm::perspective(glm::radians(fov), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
-    //GLuint Projectionlocation = glGetUniformLocation(s_program[0], "Projection");
-    //glUniformMatrix4fv(Projectionlocation, 1, GL_FALSE, value_ptr(projection));
 
     if (deltaAngle)
         computeDir(deltaAngle);
@@ -667,16 +689,20 @@ void drawScene()
         dir = Vector3(player_xpos + lx * 100, player_ypos + ly, player_zpos + lz * 100);
     else {
         dir = Vector3(player_xpos + lx, player_ypos + ly, player_zpos + lz);
-        yPos *= 10;
+        yPos *= 20;
     }
-    
+ 
     CameraSetting(s_program[0], Vector3(player_xpos, player_ypos, player_zpos), dir, yPos);
     DrawBoard();
     DrawPlayer();
 
-    if (enemy_valid) {
-        DrawEnemy();
+    for (int i = 0; i < MONSTER_SIZE; i++) {
+        DrawMonster(monster[i]);
     }
+
+    //if (enemy_valid) {
+    //    DrawEnemy();
+    //}
 
     // ∆¯≈∫
     if (bomb_mode) {
@@ -803,17 +829,21 @@ void TimerFunction(int value) {
             bomb_mode = false;
         }
     }
-
-    if (enemy_valid) {
-        // ¿”Ω√ √Êµπ√º≈©
-        if (enemy_zpos <= (player_zpos - 5.0)) {
-            enemy_zpos += 0.5f;
-        }
-        else {
-            enemy_zpos = -30.0f;
-            enemy_valid = false;
-        }
+    for (int i = 0; i < MONSTER_SIZE; ++i) {
+        monster[i].pos.x += 0.01 * monster[i].dir.x;
+        monster[i].pos.z += 0.01 * monster[i].dir.z;
     }
+
+    //if (enemy_valid) {
+    //    // ¿”Ω√ √Êµπ√º≈©
+    //    if (enemy_zpos <= (player_zpos - 5.0)) {
+    //        enemy_zpos += 0.5f;
+    //    }
+    //    else {
+    //        enemy_zpos = -30.0f;
+    //        enemy_valid = false;
+    //    }
+    //}
     glutTimerFunc(10, TimerFunction, 1);
 }
 
@@ -823,6 +853,9 @@ void get_time() {
     delta_time = currentFrame - lastFrame;
     lastFrame = currentFrame;
 }
+
+// ∆¯≈∫
+
 
 // ∆¯≈∫
 void throw_bomb() {
@@ -945,7 +978,6 @@ int Loadfile(int mapCollect)
     return 1;
 }
 
-// ¿Ã¡® ∏ ¿ª ±◊∏±∞≈øπø‰
 
 float obj_rot = 0;
 
