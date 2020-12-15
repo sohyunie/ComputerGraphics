@@ -24,7 +24,7 @@
 
 #define SIZE 30 // ∏  ªÁ¿Ã¡Ó
 #define MONSTER_SIZE 20
-#define MAX_TIME 10
+#define MAX_TIME 120
 using namespace std;
 
 normal_distribution <float>uid_mColor{ 0.0,1.0 };
