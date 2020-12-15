@@ -24,7 +24,7 @@
 
 #define SIZE 30 // 맵 사이즈
 #define MONSTER_SIZE 20
-#define MAX_TIME 120
+#define MAX_TIME 10
 using namespace std;
 
 normal_distribution <float>uid_mColor{ 0.0,1.0 };
@@ -79,6 +79,7 @@ struct Shape {
     Vector3 pos;
     Vector3 dir;
     float radius;
+    bool isAlive;
 
     Vector4 GetBB() {
         return Vector4(pos.x - radius, pos.z - radius, pos.x + radius, pos.z + radius);
@@ -155,6 +156,8 @@ bool bomb_mode = false;     // 폭탄 던지기
 float delta_time = 0.0f;
 float lastFrame = 0.0f;
 float penaltyTime = 0.0f;
+bool isPlayGame = true;
+bool isClear = false;
 
 
 ////////////////////////////////////////////
@@ -413,16 +416,53 @@ void renderBitmapString(float x, float y, float z, void* font, char* string)
 
 void PrintUI()
 {
-    //glClearColor(0.0, 0.0, 0.0, 0.0);
-    string text = "TIME : " + to_string(MAX_TIME - currentTime()).substr(0, 4);
-    const char* string = text.data();
-    glColor3f(0.5f, 0.5f, 0.5f);
-    glRasterPos2f(-0.9, 0.9);  // 문자 출력할 위치 설정
-    
-    int len = (int)strlen(string);
-    for (int i = 0; i < len; i++) {
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
+    if (isPlayGame) {
+        //glClearColor(0.0, 0.0, 0.0, 0.0);
+        string text = "TIME : " + to_string(currentTime()).substr(0, 4);
+        const char* string = text.data();
+        glColor3f(0.5f, 0.5f, 0.5f);
+        glRasterPos2f(-0.9, 0.9);  // 문자 출력할 위치 설정
+
+        int len = (int)strlen(string);
+        for (int i = 0; i < len; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
+        }
+
+        text = "KEY : " + to_string(key_sum);
+        string = text.data();
+        glColor3f(0.5f, 0.5f, 0.5f);
+        glRasterPos2f(-0.9, 0.8);  // 문자 출력할 위치 설정
+
+        len = (int)strlen(string);
+        for (int i = 0; i < len; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
+        }
     }
+    else {
+        if (isClear) {
+            string text = "GAME CLEAR";
+            const char* string = text.data();
+            glColor3f(0.5f, 0.5f, 0.5f);
+            glRasterPos2f(0.0, 0.0);  // 문자 출력할 위치 설정
+
+            int len = (int)strlen(string);
+            for (int i = 0; i < len; i++) {
+                glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, string[i]);
+            }
+        }
+        else {
+            string text = "GAME OVER";
+            const char* string = text.data();
+            glColor3f(0.5f, 0.5f, 0.5f);
+            glRasterPos2f(0.0, 0.0);  // 문자 출력할 위치 설정
+
+            int len = (int)strlen(string);
+            for (int i = 0; i < len; i++) {
+                glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, string[i]);
+            }
+        }
+    }
+
 }
 
 void DrawKey(Shape shape) {
@@ -479,6 +519,23 @@ void DrawBoard()
     }
 }
 
+void InitGame()
+{
+    for (int i = 0; i < SIZE; i++)
+    {
+        for (int j = 0; j < SIZE; j++)
+        {
+            boardShape[i][j].type = BOARD_TYPE::NONE;
+        }
+    }
+
+    for (int i = 0; i < MONSTER_SIZE; i++)
+        monster[i].isAlive = false;
+
+    player.pos.x = 0;
+    player.pos.y = 0;
+}
+
 void computePos(float deltaMove)
 {
     player.pos.x += deltaMove * lx * 0.01f;
@@ -491,19 +548,21 @@ void computeDir(float deltaAngle) {
 }
 
 void DrawMonster(Shape monster) {
-    glm::mat4 monsterSTR = glm::mat4(1.0f);
-    qobj = gluNewQuadric();
-    glm::vec3 monsterPos = glm::vec3(monster.pos.x, monster.pos.y, monster.pos.z);
-    glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(4, 4, 4));
-    glm::mat4 T = glm::translate(glm::mat4(1.0f), monsterPos);
-    monsterSTR = T * S;
-    unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
-    glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(monsterSTR));
+    if (monster.isAlive) {
+        glm::mat4 monsterSTR = glm::mat4(1.0f);
+        qobj = gluNewQuadric();
+        glm::vec3 monsterPos = glm::vec3(monster.pos.x, monster.pos.y, monster.pos.z);
+        glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(4, 4, 4));
+        glm::mat4 T = glm::translate(glm::mat4(1.0f), monsterPos);
+        monsterSTR = T * S;
+        unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
+        glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(monsterSTR));
 
-    unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
-    glUniform3f(Color_Bomb, monster.color.x, monster.color.y, monster.color.z);
+        unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
+        glUniform3f(Color_Bomb, monster.color.x, monster.color.y, monster.color.z);
 
-    gluSphere(qobj, 1.0, 20, 20);
+        gluSphere(qobj, 1.0, 20, 20);
+    }
 }
 
 void InitShape() {
@@ -579,6 +638,8 @@ void releaseKey(int key, int x, int y) {
 }
 
 void Keyboard(unsigned char key, int x, int y) {
+    if (!isPlayGame)
+        return;
     switch (key) {
     case '1':
         isFPS = false;
@@ -599,6 +660,9 @@ void Keyboard(unsigned char key, int x, int y) {
 
 void SpecialKeyboard(int key, int xx, int yy)
 {
+    if (!isPlayGame)
+        return;
+
     if (key == GLUT_KEY_LEFT)
     {
         deltaAngle = -0.025f;
@@ -621,65 +685,74 @@ void SpecialKeyboard(int key, int xx, int yy)
 float elapsedTime;
 Vector3 priorPos = Vector3();
 void TimerFunction(int value) {
-    if (bomb_mode) {
-        if (elapsedTime > 0) {
-            elapsedTime -= 0.1f;
-            bombShape.pos.x += bombShape.dir.x;
-            bombShape.pos.z += bombShape.dir.z;
-            // Monster Collision
-            for (int i = 0; i < MONSTER_SIZE; i++) {
-                if (CollisionCheck(monster[i], bombShape)) {
-                    printf("Collision MONSTER to BOMB\n");
-                }
-            }
-            // TODO : 충돌체크 여기다 해주면 됨
+    cout << currentTime() << endl;
+    if (isPlayGame) {
+        if (currentTime() < 0) {
+            // GameOver;
+            InitGame();
+            isPlayGame = false;
+            isFPS = 3;
         }
-        else {
-            elapsedTime = BOMB_TIME;
-            bomb_mode = false;
-        }
-    }
-    priorPos = player.pos;
-    for (int i = 0; i < MONSTER_SIZE; ++i) {
-        get_bb(monster[i]);
-        monster[i].pos.x += 0.01 * monster[i].dir.x;
-        monster[i].pos.z += 0.01 * monster[i].dir.z;
-        if (CollisionCheck(monster[i], player)) {
-            monster[i].pos.x = priorPos.x;
-            monster[i].pos.z = priorPos.z;
-            penaltyTime -= 10.f;
-            cout << "Monster and Player collide" << endl;
-        }
-    }
 
-    // Player to Board Collision
-    for (int i = 0; i < SIZE; i++)
-    {
-        for (int j = 0; j < SIZE; j++)
+        if (bomb_mode) {
+            if (elapsedTime > 0) {
+                elapsedTime -= 0.1f;
+                bombShape.pos.x += bombShape.dir.x;
+                bombShape.pos.z += bombShape.dir.z;
+                // Monster Collision
+                for (int i = 0; i < MONSTER_SIZE; i++) {
+                    if (CollisionCheck(monster[i], bombShape)) {
+                        printf("Collision MONSTER to BOMB\n");
+                    }
+                }
+                // TODO : 충돌체크 여기다 해주면 됨
+            }
+            else {
+                elapsedTime = BOMB_TIME;
+                bomb_mode = false;
+            }
+        }
+        for (int i = 0; i < MONSTER_SIZE; ++i) {
+            get_bb(monster[i]);
+            monster[i].pos.x += 0.01 * monster[i].dir.x;
+            monster[i].pos.z += 0.01 * monster[i].dir.z;
+            if (CollisionCheck(monster[i], player)) {
+                monster[i].pos.x += lx * 10;
+                monster[i].pos.z += lz * 10;
+                penaltyTime -= 10.f;
+                cout << "Monster and Player collide" << endl;
+            }
+        }
+
+        // Player to Board Collision
+        for (int i = 0; i < SIZE; i++)
         {
-            switch (boardShape[i][j].type) {
-            case BOARD_TYPE::NONE:
-                break;
-            case BOARD_TYPE::WALL:
-            case BOARD_TYPE::FIXED_WALL:
-                if (CollisionCheck(boardShape[i][j], player)) {
-                    player.pos.x += -lx * 1;
-                    player.pos.z += -lz * 1;
-                    cout << "[Collision] WALL PLAYER_" << i << "_" << j << endl;
+            for (int j = 0; j < SIZE; j++)
+            {
+                switch (boardShape[i][j].type) {
+                case BOARD_TYPE::NONE:
+                    break;
+                case BOARD_TYPE::WALL:
+                case BOARD_TYPE::FIXED_WALL:
+                    if (CollisionCheck(boardShape[i][j], player)) {
+                        player.pos.x = priorPos.x;
+                        player.pos.z = priorPos.z;
+                        cout << "[Collision] WALL PLAYER_" << i << "_" << j << endl;
+                    }
+                    break;
+                case BOARD_TYPE::ITEM:
+                    if (CollisionCheck(boardShape[i][j], player)) {
+                        boardShape[i][j].type = NONE;
+                        key_sum++;
+                        cout << "[Collision] ITEM PLAYER_" << i << "_" << j << endl;
+                        cout << "현재 아이템 SCORE : " << key_sum << endl;
+                    }
+                    break;
                 }
-                break;
-            case BOARD_TYPE::ITEM:
-                if (CollisionCheck(boardShape[i][j], player)) {
-                    boardShape[i][j].type = NONE;
-                    key_sum++;
-                    cout << "[Collision] ITEM PLAYER_" << i << "_" << j << endl;
-                    cout << "현재 아이템 SCORE : " << key_sum << endl;
-                }
-                break;
             }
         }
+        priorPos = player.pos;
     }
-
 
     glutTimerFunc(10, TimerFunction, 1);
 }
@@ -695,7 +768,7 @@ float get_time()
 }
 
 float currentTime() {
-    return round(get_time() / 100) / 10 - penaltyTime;
+    return MAX_TIME - round(get_time() / 100) / 10 + penaltyTime;
 }
 
 // 폭탄
