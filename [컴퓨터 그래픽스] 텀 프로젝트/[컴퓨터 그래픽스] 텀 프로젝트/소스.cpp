@@ -253,12 +253,6 @@ bool firstMouse = true;
 float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
 
-// 충돌체크를 위한 radius 선언
-float player_radius = 1.0f;
-float enemy_radius = 0.75f;
-float bomb_radius = 0.3f;
-
-
 ////////////////////////////////////////////
 // Camera
 
@@ -495,7 +489,7 @@ void DrawCube(Shape shape)
     glm::mat4 T = glm::mat4(1.0f);
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
     T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y, shape.pos.z));
-    cubeSTR = S * T;
+    cubeSTR = T * S;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -510,8 +504,8 @@ void Draw2ndCube(Shape shape) {
     glm::mat4 T = glm::mat4(1.0f);
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 2 * shape.radius, shape.pos.z));
-    seccubeSTR = S * T;
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 2, shape.pos.z));
+    seccubeSTR = T * S;
     unsigned int transform2ndCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transform2ndCube, 1, GL_FALSE, glm::value_ptr(seccubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -552,7 +546,7 @@ void DrawKey(Shape shape) {
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
     T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y, shape.pos.z));
-    cubeSTR = S * T;
+    cubeSTR = T * S;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -773,11 +767,11 @@ void TimerFunction(int value) {
             case BOARD_TYPE::WALL:
             case BOARD_TYPE::FIXED_WALL:
                 if (CollisionCheck(boardShape[i][j], player))
-                    printf("Collision PLAYER\n");
+                    cout << "[Collision] WALL PLAYER_" << i << "_" << j << endl;
                 break;
             case BOARD_TYPE::ITEM:
                 if (CollisionCheck(boardShape[i][j], player))
-                    printf("Collision ITEM\n");
+                    cout << "[Collision] ITEM PLAYER_" << i << "_" << j << endl;
                 break;
             }
         }
@@ -875,8 +869,8 @@ int Loadfile(int mapCollect)
                     boardShape[i][j].radius = 3.0f;
                 }
                 else {
-                    boardShape[i][j].radius = 1.0f;
-                    boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
+                    boardShape[i][j].radius = 3.0f;
+                    boardShape[i][j].scale = Vector3(2.5, 2.5, 2.5);
 
                     if (boardShape[i][j].type == FIXED_WALL) {
                         boardShape[i][j].color = Vector3(0.7, 0.7, 0.7);
@@ -1078,11 +1072,10 @@ bool CollisionCheck(Shape shape, Shape shape2) { // shpae2 : player
 
     if ((bbox.minz < bbox2.minz && bbox.maxz > bbox2.minz) ||
         ((bbox.minz < bbox2.maxz && bbox.maxz > bbox2.maxz))) {
-        xcollision = true;
+        zcollision = true;
     }
 
     if (xcollision && zcollision) {
-        cout << "충돌" << endl;
         return true;
     }
     else
