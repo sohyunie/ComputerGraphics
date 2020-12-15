@@ -168,6 +168,8 @@ float r;
 float g;
 float b;
 
+int monster_num = 0;
+
 bool isMoveX = false;
 int directionX = 0;
 
@@ -419,8 +421,8 @@ void main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
     glutInitWindowPosition(500, 100);
-    glutInitWindowSize(800, 600);
-    glutCreateWindow("Example18");
+    glutInitWindowSize(WIDTH, HEIGHT);
+    glutCreateWindow("GAME NAME");
 
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
@@ -626,7 +628,6 @@ void InitShape() {
     player.radius = 0.3f;
 }
 
-
 void drawScene()
 {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -657,6 +658,7 @@ void drawScene()
     CameraSetting(s_program[0], player.pos, dir, yPos);
     DrawBoard();
     DrawPlayer(player);
+    // cout << "player pos : " << player.pos.x << ", " << player.pos.y << ", " << player.pos.z << endl;
 
     // 폭탄
     if (bomb_mode) {
@@ -664,9 +666,10 @@ void drawScene()
         // throw_bomb = false;
         // 적 구현 이후에 timer함수에서 움직이는거 구현
     }
-
+        
     for (int i = 0; i < MONSTER_SIZE; i++) {
         DrawMonster(monster[i]);
+        // cout << i << " : " << monster[i].pos.x << ", " << monster[i].pos.y << ", " << monster[i].pos.z << endl;
     }
 
     glutPostRedisplay();
@@ -879,7 +882,7 @@ int Loadfile(int mapCollect)
 
                 boardShape[i][j].type = (BOARD_TYPE)cha;
 
-                boardShape[i][j].pos = Vector3((i * 7.5f - 35), 0, (j * 7.5f - 35));
+                boardShape[i][j].pos = Vector3((i * 7.5f - 105), 0, (j * 7.5f - 105));
 
                 if (boardShape[i][j].type == ITEM) {
                     boardShape[i][j].color = Vector3(Yellow.r, Yellow.g, Yellow.b);
@@ -1102,10 +1105,12 @@ bool CollisionCheck(Shape shape, Shape shape2) { // shpae2 : player
 }
 
 bool radius_collision(Shape shape1, Shape shape2) {
-    float distance = (shape1.pos.x - shape2.pos.x) * (shape1.pos.x - shape2.pos.x) + (shape1.pos.y - shape2.pos.y) * (shape1.pos.y - shape2.pos.y) + (shape1.pos.z - shape2.pos.z) * (shape1.pos.z - shape2.pos.z);
+    float distance = (shape1.pos.x - shape2.pos.x) * (shape1.pos.x - shape2.pos.x) + (shape1.pos.z - shape2.pos.z) * (shape1.pos.z - shape2.pos.z);
     float rad_sum_sq = (shape1.radius + shape2.radius) * (shape1.radius + shape2.radius);
+    
     if (distance < rad_sum_sq) {
-        printf("raius_collision!!\n");
+        cout << "distance : " << distance << endl;
+        cout << "rd sum : " << rad_sum_sq << endl;
         return true;
     }
     else
