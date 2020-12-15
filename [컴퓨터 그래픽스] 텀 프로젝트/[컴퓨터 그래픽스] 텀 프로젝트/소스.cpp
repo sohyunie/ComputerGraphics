@@ -9,7 +9,7 @@
 #include <time.h>
 #include <windows.h>
 #include <vector>
-//#include <fstream>
+#include <fstream>
 //#include <windows.h>
 //#include <mmsystem.h>
 #include <gl/glew.h> 
@@ -23,16 +23,15 @@
 #define WIDTH 800
 #define HEIGHT 600
 
-#define MAP_1 "MAP_1.txt"
-#define MAP_2 "MAP_2.txt"
-#define MAP_3 "MAP_3.txt"
-#define MAP_4 "MAP_4.txt"
-#define MAP_5 "MAP_5.txt"
-#define INIT "MAP_1.txt"
+//#define MAP_1 "MAP_INIT.txt"
+//#define MAP_2 "MAP_2.txt"
+//#define MAP_3 "MAP_3.txt"
+//#define MAP_4 "MAP_4.txt"
+//#define MAP_5 "MAP_5.txt"
 
 #define SHAPE_SIZE 0.5f // Enemy size
 
-#define SIZE 31 // 맵 사이즈
+#define SIZE 30 // 맵 사이즈
 #define MONSTER_SIZE 20
 using namespace std;
 
@@ -155,7 +154,7 @@ BITMAPINFO* info; // 비트맵 헤더 저장할 변수
 GLuint textures[1];
 void initTextures();
 
-int mapCollect = 0;
+int mapNumber;
 float colorbuffer[4][3] = { 0 };
 
 Shape boardShape[SIZE][SIZE];
@@ -424,7 +423,9 @@ void main(int argc, char** argv) {
     cout << "GLEW Initialized\n";
     glewInit();
 
-    Loadfile(1);
+    mapNumber = rand() % 5 + 1;
+
+    Loadfile(mapNumber);
     InitShape();
     InitBuffer();
     InitShader();
@@ -488,7 +489,7 @@ void DrawCube(Shape shape)
     glm::mat4 S = glm::mat4(1.0f);
     glm::mat4 T = glm::mat4(1.0f);
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + shape.radius, shape.pos.z));
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 1, shape.pos.z));
     cubeSTR = T * S;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
@@ -504,7 +505,7 @@ void Draw2ndCube(Shape shape) {
     glm::mat4 T = glm::mat4(1.0f);
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 2 * shape.radius, shape.pos.z));
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 2 *shape.radius, shape.pos.z));
     seccubeSTR = T * S;
     unsigned int transform2ndCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transform2ndCube, 1, GL_FALSE, glm::value_ptr(seccubeSTR));
@@ -821,22 +822,19 @@ int Loadfile(int mapCollect)
     switch (mapCollect)
     {
     case 0:
-        fp = fopen(MAP_1, "rt");
+        fp = fopen("MAP_1.txt", "rt");
         break;
     case 1:
-        fp = fopen(MAP_2, "rt");
+        fp = fopen("MAP_2.txt", "rt");
         break;
     case 2:
-        fp = fopen(MAP_3, "rt");
+        fp = fopen("MAP_3.txt", "rt");
         break;
     case 3:
-        fp = fopen(MAP_4, "rt");
+        fp = fopen("MAP_4.txt", "rt");
         break;
     case 4:
-        fp = fopen(MAP_5, "rt");
-        break;
-    case 5:
-        fp = fopen(INIT, "rt");
+        fp = fopen("MAP_5.txt", "rt");
         break;
     }
 
@@ -846,8 +844,6 @@ int Loadfile(int mapCollect)
         printf("\n board gen fail\n");
         return 1;
     }
-
-    printf("\n완료\n");
 
     int cha;
 
