@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <random>
 #include <time.h>
+#include <windows.h>
 #include <vector>
 #include <gl/glew.h> 
 #include <gl/freeglut.h>
@@ -23,13 +24,17 @@
 #define SHAPE_SIZE 0.5f // Enemy size
 
 #define SIZE 30 // 맵 사이즈
-#define MONSTER_SIZE 20
+#define MONSTER_SIZE 30
 #define MAX_TIME 120
+#define MAX_ITEM 5
+
+#define SOUND_FILE_NAME_BGM_1	"../sound/backgroundmusic.wav"
 using namespace std;
 
 normal_distribution <float>uid_mColor{ 0.0,1.0 };
-normal_distribution <float>uid_mDir{ -3.0 ,3.0 };
-normal_distribution <float>uid_mPos{ 0, 30 };
+normal_distribution <float>uid_mSpeed{ 8.0 ,10.0 };
+normal_distribution <float>uid_mDir{ -1.0 , 1.0 };
+normal_distribution <float>uid_mPos{ -60.0, 60.0 };
 default_random_engine dre((size_t)time(NULL));
 
 const float BOMB_TIME = 3.0;
@@ -80,6 +85,8 @@ struct Shape {
     Vector3 dir;
     float radius;
     bool isAlive;
+    int hitCount = 3;
+    float speed;
 
     Vector4 GetBB() {
         return Vector4(pos.x - radius, pos.z - radius, pos.x + radius, pos.z + radius);
@@ -100,6 +107,8 @@ void InitShader();
 GLvoid Reshape(int, int);
 void drawScene();
 void CalculateLight(float, float, float, float);
+
+void CalculatePointLight(Shape shape, float amb);
 int Loadfile(int mapCollect);
 void DrawBoard();
 void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir, float yPos);
@@ -110,6 +119,7 @@ void DrawPlayer();
 void DrawCube();
 void Draw2ndCube();
 void DrawKey();
+void InitGame();
 void InitShape();
 float get_time();
 float currentTime();
@@ -313,7 +323,7 @@ void main(int argc, char** argv) {
 
     mapNumber = rand() % 5 + 1;
 
-    Loadfile(mapNumber);
+    Loadfile(0);
     InitShape();
     InitBuffer();
     InitShader();
@@ -479,6 +489,8 @@ void DrawKey(Shape shape) {
 
     glBindVertexArray(VAO[2]);
     glDrawArrays(GL_TRIANGLES, 0, pyramid_vertices.size());
+
+    CalculatePointLight(shape, 0.5f);
 }
 
 void DrawPlain() {
@@ -566,13 +578,18 @@ void DrawMonster(Shape monster) {
 }
 
 void InitShape() {
+    PlaySound(TEXT(SOUND_FILE_NAME_BGM_1), NULL, SND_ASYNC | SND_SYNC);
+
     for (int i = 0; i < MONSTER_SIZE; i++) {
-        monster[i].pos = Vector3(uid_mPos(dre), 1.5f, uid_mPos(dre));
+        monster[i].pos = Vector3(130 + uid_mPos(dre), 1.5f, 130 + uid_mPos(dre));
         monster[i].color = Vector3(uid_mColor(dre), uid_mColor(dre), uid_mColor(dre));
         monster[i].dir = Vector3(uid_mDir(dre), 0.0f, uid_mDir(dre));
+        monster[i].speed = uid_mSpeed(dre);
         monster[i].radius = 4.0f;
+        monster[i].isAlive = true;
     }
 
+    bombShape.pos.y = 2.0f;
     player.radius = 0.3f;
 }
 
@@ -613,8 +630,6 @@ void drawScene()
     // 폭탄
     if (bomb_mode) {
         throw_bomb();
-        // throw_bomb = false;
-        // 적 구현 이후에 timer함수에서 움직이는거 구현
     }
 
     for (int i = 0; i < MONSTER_SIZE; i++) {
@@ -650,8 +665,8 @@ void Keyboard(unsigned char key, int x, int y) {
     case 'b':
         // 일단 보이는것만.. b로 구현함 ㅠㅠ
         if (!bomb_mode) {
-            bombShape.pos = player.pos;
-            bombShape.dir = Vector3(lx, ly, lz);
+            bombShape.pos = Vector3(player.pos.x, 2.0f, player.pos.z);
+            bombShape.dir = Vector3(lx, 0, lz);
             bomb_mode = true;
         }
         break;
@@ -685,7 +700,6 @@ void SpecialKeyboard(int key, int xx, int yy)
 float elapsedTime;
 Vector3 priorPos = Vector3();
 void TimerFunction(int value) {
-    cout << currentTime() << endl;
     if (isPlayGame) {
         if (currentTime() < 0) {
             // GameOver;
@@ -701,7 +715,22 @@ void TimerFunction(int value) {
                 bombShape.pos.z += bombShape.dir.z;
                 // Monster Collision
                 for (int i = 0; i < MONSTER_SIZE; i++) {
+                    if (monster[i].isAlive == false)
+                        continue;
+
                     if (CollisionCheck(monster[i], bombShape)) {
+                        monster[i].hitCount--;
+                        monster[i].color.x -= 0.1;
+                        monster[i].color.y -= 0.1;
+                        monster[i].color.z -= 0.1;
+                        if (monster[i].hitCount <= 0) {
+                            monster[i].isAlive = false;
+                        }
+                        bombShape.pos.x = 0;
+                        bombShape.pos.z = 0;
+                        bomb_mode = false;
+                        elapsedTime = BOMB_TIME;
+
                         printf("Collision MONSTER to BOMB\n");
                     }
                 }
@@ -713,9 +742,11 @@ void TimerFunction(int value) {
             }
         }
         for (int i = 0; i < MONSTER_SIZE; ++i) {
-            get_bb(monster[i]);
-            monster[i].pos.x += 0.01 * monster[i].dir.x;
-            monster[i].pos.z += 0.01 * monster[i].dir.z;
+            if (monster[i].isAlive == false)
+                continue;
+
+            monster[i].pos.x += 0.01 * monster[i].dir.x * monster[i].speed;
+            monster[i].pos.z += 0.01 * monster[i].dir.z * monster[i].speed;
             if (CollisionCheck(monster[i], player)) {
                 monster[i].pos.x += lx * 10;
                 monster[i].pos.z += lz * 10;
@@ -733,21 +764,35 @@ void TimerFunction(int value) {
                 case BOARD_TYPE::NONE:
                     break;
                 case BOARD_TYPE::WALL:
-                case BOARD_TYPE::FIXED_WALL:
                     if (CollisionCheck(boardShape[i][j], player)) {
                         player.pos.x = priorPos.x;
                         player.pos.z = priorPos.z;
                         cout << "[Collision] WALL PLAYER_" << i << "_" << j << endl;
                     }
                     break;
+                case BOARD_TYPE::FIXED_WALL:
+                    if (CollisionCheck(boardShape[i][j], player)) {
+                        player.pos.x = priorPos.x;
+                        player.pos.z = priorPos.z;
+                        cout << "[Collision] WALL PLAYER_" << i << "_" << j << endl;
+                    }
+                    for (int k = 0; k < MONSTER_SIZE; ++k) {
+                        if (CollisionCheck(boardShape[i][j], monster[k])) {
+                            monster[k].pos.x -= monster[k].dir.x * 0.5f;
+                            monster[k].pos.z -= monster[k].dir.z * 0.5f;
+                            monster[k].dir.x *= -1;
+                            monster[k].dir.z *= -1;
+                        }
+                    }
+                    break;
                 case BOARD_TYPE::ITEM:
                     if (CollisionCheck(boardShape[i][j], player)) {
                         boardShape[i][j].type = NONE;
                         key_sum++;
-                        if (key_sum >= 5) {
+                        if (key_sum >= MAX_ITEM) {
                             InitGame();
                             isPlayGame = false;
-                            isClear = false;
+                            isClear = true;
                         }
                         cout << "[Collision] ITEM PLAYER_" << i << "_" << j << endl;
                         cout << "현재 아이템 SCORE : " << key_sum << endl;
@@ -1002,6 +1047,20 @@ void InitShader() {
 void CalculateLight(float lgt_x, float lgt_y, float lgt_z, float amb) {
     unsigned int light_pos = glGetUniformLocation(s_program[0], "g_lightPos");
     glUniform3f(light_pos, lgt_x, lgt_y, lgt_z);
+
+    unsigned int light_color = glGetUniformLocation(s_program[0], "g_lightColor");
+    glUniform3f(light_color, lightColor.x, lightColor.y, lightColor.z);
+
+    unsigned int view_pos = glGetUniformLocation(s_program[0], "g_cameraPos");
+    glUniform3f(view_pos, player.pos.x, player.pos.y, player.pos.z);
+
+    unsigned int ambientLight_on = glGetUniformLocation(s_program[0], "g_lightAmbient");
+    glUniform3f(ambientLight_on, amb, amb, amb);
+}
+
+void CalculatePointLight(Shape shape, float amb) {
+    unsigned int light_pos = glGetUniformLocation(s_program[0], "g_lightPos");
+    glUniform3f(light_pos, shape.pos.x, shape.pos.y + 2, shape.pos.z);
 
     unsigned int light_color = glGetUniformLocation(s_program[0], "g_lightColor");
     glUniform3f(light_color, lightColor.x, lightColor.y, lightColor.z);
