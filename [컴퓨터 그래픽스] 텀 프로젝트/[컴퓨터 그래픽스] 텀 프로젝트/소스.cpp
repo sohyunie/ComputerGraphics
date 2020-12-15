@@ -570,7 +570,6 @@ void DrawBoard()
     {
         for (int j = 0; j < SIZE; j++)
         {
-            get_bb(boardShape[i][j]);
             switch (boardShape[i][j].type) {
             case BOARD_TYPE::NONE:
                 break;
@@ -578,13 +577,9 @@ void DrawBoard()
             case BOARD_TYPE::FIXED_WALL:
                 DrawCube(boardShape[i][j]);
                 Draw2ndCube(boardShape[i][j]);
-                //if (CollisionCheck(boardShape[i][j], player))
-                //    printf("충돌이라고오오오ㅗㅇ\n");
                 break;
             case BOARD_TYPE::ITEM:
                 DrawKey(boardShape[i][j]);
-                if (CollisionCheck(boardShape[i][j], player))
-                    printf("충돌이라고오오오ㅗㅇ\n");
                 break;
             }
         }
@@ -672,9 +667,6 @@ void drawScene()
 
     for (int i = 0; i < MONSTER_SIZE; i++) {
         DrawMonster(monster[i]);
-        get_bb(monster[i]);
-        if (ccollision(monster[i], bombShape))
-            printf("제발좀\n");
     }
 
     glutPostRedisplay();
@@ -752,6 +744,12 @@ void TimerFunction(int value) {
             elapsedTime -= 0.1f;
             bombShape.pos.x += bombShape.dir.x;
             bombShape.pos.z += bombShape.dir.z;
+            // Monster Collision
+            for (int i = 0; i < MONSTER_SIZE; i++) {
+                if (CollisionCheck(monster[i], bombShape)) {
+                    printf("Collision MONSTER to BOMB\n");
+                }
+            }
             // TODO : 충돌체크 여기다 해주면 됨
         }
         else {
@@ -763,6 +761,28 @@ void TimerFunction(int value) {
         monster[i].pos.x += 0.01 * monster[i].dir.x;
         monster[i].pos.z += 0.01 * monster[i].dir.z;
     }
+
+    // Player to Board Collision
+    for (int i = 0; i < SIZE; i++)
+    {
+        for (int j = 0; j < SIZE; j++)
+        {
+            switch (boardShape[i][j].type) {
+            case BOARD_TYPE::NONE:
+                break;
+            case BOARD_TYPE::WALL:
+            case BOARD_TYPE::FIXED_WALL:
+                if (CollisionCheck(boardShape[i][j], player))
+                    printf("Collision PLAYER\n");
+                break;
+            case BOARD_TYPE::ITEM:
+                if (CollisionCheck(boardShape[i][j], player))
+                    printf("Collision ITEM\n");
+                break;
+            }
+        }
+    }
+
 
     glutTimerFunc(10, TimerFunction, 1);
 }
@@ -1044,7 +1064,7 @@ void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir, 
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
 }
 
-int debug = 0;
+
 bool CollisionCheck(Shape shape, Shape shape2) { // shpae2 : player
     Vector4 bbox = shape.GetBB();
     Vector4 bbox2 = shape2.GetBB();
@@ -1053,49 +1073,16 @@ bool CollisionCheck(Shape shape, Shape shape2) { // shpae2 : player
     
     if ((bbox.minx < bbox2.minx && bbox.maxx > bbox2.minx) ||
     ((bbox.minx < bbox2.maxx && bbox.maxx > bbox2.maxx))) {
-        debug++;
-        cout<< "xcollision" << debug << endl;
         xcollision = true;
     }
 
     if ((bbox.minz < bbox2.minz && bbox.maxz > bbox2.minz) ||
         ((bbox.minz < bbox2.maxz && bbox.maxz > bbox2.maxz))) {
-        debug++;
-        cout << "zcollision" << debug << endl;
         xcollision = true;
     }
-    //if ((bbox.minz < bbox2.maxz || bbox.maxz < bbox2.minz)) {
-    //    cout << "zcollision" << endl;
-    //    zcollision = true;
-    //}
-
 
     if (xcollision && zcollision) {
         cout << "충돌" << endl;
-        return true;
-    }
-    else
-        return false;
-}
-
-bool ccollision(Shape shape, Shape bomb) {
-    Vector4 sbox = shape.GetBB();
-    Vector4 bbox = bomb.GetBB();
-
-    bool xcollision = false;
-    bool zcollision = false;
-
-    if ((bbox.minx > (sbox.minx)) && (bbox.maxx < (sbox.minx))) {
-        cout << "xcollision(bomb)" << endl;
-        xcollision = true;
-    }
-    if ((bbox.maxz > sbox.minx) && (bbox.minz < sbox.minx))
-        cout << "zcollision(bomb)" << endl;
-        zcollision = true;
-
-
-    if (xcollision && zcollision) {
-        cout << "충돌(bomb)" << endl;
         return true;
     }
     else
