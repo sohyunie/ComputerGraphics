@@ -744,6 +744,11 @@ void TimerFunction(int value) {
                     if (CollisionCheck(boardShape[i][j], player)) {
                         boardShape[i][j].type = NONE;
                         key_sum++;
+                        if (key_sum >= 5) {
+                            InitGame();
+                            isPlayGame = false;
+                            isClear = false;
+                        }
                         cout << "[Collision] ITEM PLAYER_" << i << "_" << j << endl;
                         cout << "현재 아이템 SCORE : " << key_sum << endl;
                     }
