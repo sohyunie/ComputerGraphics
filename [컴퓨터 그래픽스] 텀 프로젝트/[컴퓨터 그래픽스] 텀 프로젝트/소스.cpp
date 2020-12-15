@@ -128,7 +128,6 @@ void InitShape();
 float get_time();
 float currentTime();
 bool CollisionCheck(Shape, Shape);
-bool ccollision(Shape, Shape);
 bool radius_collision(Shape, Shape);
 
 void SpecialKeyboard(int key, int x, int y); //키보드 조종
@@ -577,18 +576,10 @@ void DrawBoard()
             case BOARD_TYPE::WALL:
             case BOARD_TYPE::FIXED_WALL:
                 DrawCube(boardShape[i][j]);
-                if (radius_collision(boardShape[i][j], player))
-                    printf("[%d][%d] rad wall collision\n", i, j);
                 Draw2ndCube(boardShape[i][j]);
                 break;
             case BOARD_TYPE::ITEM:
                 DrawKey(boardShape[i][j]);
-<<<<<<< HEAD
-                if (radius_collision(boardShape[i][j], player))
-                    printf("[%d][%d]rad item collision\n", i, j);
-
-=======
->>>>>>> 71fbf9b5c1cc6dbfdf7052400745a26c2b7be099
                 break;
             }
         }
@@ -631,6 +622,7 @@ void InitShape() {
         monster[i].dir = Vector3(uid_mDir(dre), 0.0f, uid_mDir(dre));
         monster[i].radius = 1.0f;
     }
+
     player.radius = 0.3f;
 }
 
@@ -665,7 +657,7 @@ void drawScene()
     CameraSetting(s_program[0], player.pos, dir, yPos);
     DrawBoard();
     DrawPlayer(player);
-    
+
     // 폭탄
     if (bomb_mode) {
         throw_bomb();
@@ -675,14 +667,6 @@ void drawScene()
 
     for (int i = 0; i < MONSTER_SIZE; i++) {
         DrawMonster(monster[i]);
-<<<<<<< HEAD
-        get_bb(monster[i]);
-        if (radius_collision(monster[i], bombShape))
-            printf("[%d] rad monster bomb collision\n", i);
-        if (radius_collision(monster[i], player))
-            printf("[%d] rad monster player collision\n", i);
-=======
->>>>>>> 71fbf9b5c1cc6dbfdf7052400745a26c2b7be099
     }
 
     glutPostRedisplay();
@@ -765,6 +749,9 @@ void TimerFunction(int value) {
                 if (CollisionCheck(monster[i], bombShape)) {
                     printf("Collision MONSTER to BOMB\n");
                 }
+                if (radius_collision(monster[i], bombShape)) {
+                    printf("RADIUS_COLLISION : [%d]MONSTER to BOMB\n", i);
+                }
             }
             // TODO : 충돌체크 여기다 해주면 됨
         }
@@ -790,21 +777,30 @@ void TimerFunction(int value) {
             case BOARD_TYPE::FIXED_WALL:
                 if (CollisionCheck(boardShape[i][j], player))
                     printf("Collision PLAYER\n");
+                if (radius_collision(boardShape[i][j], player))
+                    printf("RADIUS_COLLISION : [%d][%d]WALL to PLAYER\n", i, j);
                 break;
             case BOARD_TYPE::ITEM:
                 if (CollisionCheck(boardShape[i][j], player))
                     printf("Collision ITEM\n");
+                if (radius_collision(boardShape[i][j], player))
+                    printf("RADIUS_COLLISION : [%d][%d]ITEM to PLAYER\n", i, j);
                 break;
             }
         }
     }
 
+    // Player to Monster Collision
+    for (int i = 0; i < MONSTER_SIZE; i++) {
+        if (radius_collision(monster[i], player))
+            printf("RADIUS_COLLISION : [%d]MONSTER to PLAYER\n", i);
+    }
 
     glutTimerFunc(10, TimerFunction, 1);
 }
 
 // 잔여 HP 표현하는 delta_time 얻는 함수
-float get_time() 
+float get_time()
 {
     float currentFrame = glutGet(GLUT_ELAPSED_TIME);
     delta_time = currentFrame - lastFrame;
@@ -1086,9 +1082,9 @@ bool CollisionCheck(Shape shape, Shape shape2) { // shpae2 : player
     Vector4 bbox2 = shape2.GetBB();
     bool xcollision = false;
     bool zcollision = false;
-    
+
     if ((bbox.minx < bbox2.minx && bbox.maxx > bbox2.minx) ||
-    ((bbox.minx < bbox2.maxx && bbox.maxx > bbox2.maxx))) {
+        ((bbox.minx < bbox2.maxx && bbox.maxx > bbox2.maxx))) {
         xcollision = true;
     }
 
@@ -1103,35 +1099,10 @@ bool CollisionCheck(Shape shape, Shape shape2) { // shpae2 : player
     }
     else
         return false;
-<<<<<<< HEAD
-}
-
-bool ccollision(Shape shape, Shape bomb) {
-    Vector4 sbox = shape.GetBB();
-    Vector4 bbox = bomb.GetBB();
-
-    bool xcollision = false;
-    bool zcollision = false;
-
-    if ((bbox.minx > (sbox.minx)) && (bbox.maxx < (sbox.minx))) {
-        cout << "xcollision(bomb)" << endl;
-        xcollision = true;
-    }
-    if ((bbox.maxz > sbox.minx) && (bbox.minz < sbox.minx))
-        cout << "zcollision(bomb)" << endl;
-        zcollision = true;
-
-
-    if (xcollision && zcollision) {
-        cout << "충돌(bomb)" << endl;
-        return true;
-    }
-    else
-        return false;
 }
 
 bool radius_collision(Shape shape1, Shape shape2) {
-    float distance = (shape1.pos.x - shape2.pos.x) * (shape1.pos.x - shape2.pos.x) + (shape1.pos.y - shape2.pos.y) * (shape1.pos.y - shape2.pos.y) +  (shape1.pos.z - shape2.pos.z) * (shape1.pos.z - shape2.pos.z);
+    float distance = (shape1.pos.x - shape2.pos.x) * (shape1.pos.x - shape2.pos.x) + (shape1.pos.y - shape2.pos.y) * (shape1.pos.y - shape2.pos.y) + (shape1.pos.z - shape2.pos.z) * (shape1.pos.z - shape2.pos.z);
     float rad_sum_sq = (shape1.radius + shape2.radius) * (shape1.radius + shape2.radius);
     if (distance < rad_sum_sq) {
         printf("raius_collision!!\n");
@@ -1139,6 +1110,4 @@ bool radius_collision(Shape shape1, Shape shape2) {
     }
     else
         return false;
-=======
->>>>>>> 71fbf9b5c1cc6dbfdf7052400745a26c2b7be099
 }
