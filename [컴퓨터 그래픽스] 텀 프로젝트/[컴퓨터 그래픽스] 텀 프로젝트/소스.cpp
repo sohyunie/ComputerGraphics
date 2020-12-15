@@ -765,6 +765,7 @@ void RestartGame() {
     isFPS = false;
     isRestart = false;
     isOver = false;
+    isViewItem = false;
     key_sum = 0;
     Loadfile(0);
     InitShape();
@@ -800,10 +801,12 @@ void Keyboard(unsigned char key, int x, int y) {
     case 'o':
         isRestart = true;
         isOver = true;
+        isFPS = false;
         break;
     case 'c':
         isRestart = true;
         isOver = false;
+        isFPS = false;
         break;
     }
 }
@@ -847,7 +850,7 @@ void TimerFunction(int value) {
             isOver = true;
             InitGame(2);
             isPlayGame = false;
-            isFPS = 3;
+            isFPS = false;
         }
 
         if (isFPS == true) {
@@ -1170,7 +1173,6 @@ void InitBuffer()
     glGenBuffers(10, VBO);
 
     // Å¥ºê
-
     glBindVertexArray(VAO[0]);
     glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
     glBufferData(GL_ARRAY_BUFFER, cube_vertices.size() * sizeof(glm::vec3), &cube_vertices[0], GL_STATIC_DRAW);
@@ -1279,7 +1281,6 @@ void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir, 
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
 }
-
 
 bool CollisionCheck(Shape shape, Shape shape2) { // shpae2 : player
     Vector4 bbox = shape.GetBB();
