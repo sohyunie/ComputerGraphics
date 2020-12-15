@@ -121,17 +121,13 @@ void releaseKey(int key, int x, int y);
 
 
 GLUquadricObj* qobj;
-
 GLuint shaderID;
 GLuint s_program[3];
 GLuint s_LineProgram;
 GLchar* vertexsource, * fragmentsource;
 GLuint vertexshader, lineVertexShader, fragmentshader;
-
 GLuint VAO[10], VBO[10];
 GLuint VAOCube[7], VBOCube[7];
-
-unsigned int texture[10];
 
 ///////////////////////////////////////////////////////////////
 // 맵 파일 입출력
@@ -572,13 +568,6 @@ void drawScene()
     glutSwapBuffers();
 }
 
-int cameracount = 0;
-
-bool y_rotate = false;
-int y_roll = 0;
-
-float cameraSpeed = 1.0f;
-
 void releaseKey(int key, int x, int y) {
 
     switch (key)
@@ -789,8 +778,6 @@ int Loadfile(int mapCollect)
 
     return 1;
 }
-
-float obj_rot = 0;
 
 GLvoid Reshape(int w, int h) {
     glViewport(0, 0, w, h);
