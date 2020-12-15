@@ -590,7 +590,7 @@ void DrawMonster(Shape monster) {
 }
 
 void InitShape() {
-    PlaySound(TEXT(SOUND_FILE_NAME_BGM_1), NULL, SND_ASYNC | SND_SYNC);
+    //PlaySound(TEXT(SOUND_FILE_NAME_BGM_1), NULL, SND_ASYNC | SND_SYNC);
 
     for (int i = 0; i < MONSTER_SIZE; i++) {
         monster[i].pos = Vector3(130 + uid_mPos(dre), 1.5f, 130 + uid_mPos(dre));
@@ -697,6 +697,21 @@ void drawScene()
 
     CalculateLight(lightPos.x, lightPos.y, lightPos.z, 0.5);
 
+    if (deltaAngle)
+        computeDir(deltaAngle);
+
+    if (deltaMove)
+        computePos(deltaMove);
+
+    Vector3 dir = Vector3();
+    float yPos = 5.0f;
+    if (!isFPS)
+        dir = Vector3(player.pos.x + lx * 100, player.pos.y + ly, player.pos.z + lz * 100);
+    else {
+        dir = Vector3(player.pos.x + lx, player.pos.y + ly, player.pos.z + lz);
+        yPos *= 20;
+    }
+
     //if (isPlayGame)
     //    CameraSetting(s_program[0], player.pos, dir, yPos);
     //else
@@ -718,9 +733,6 @@ void drawScene()
 
         if (deltaMove)
             computePos(deltaMove);
-
-        Vector3 dir = Vector3();
-        float yPos = 5.0f;
 
         if (!isFPS)
             dir = Vector3(player.pos.x + lx * 100, player.pos.y + ly, player.pos.z + lz * 100);

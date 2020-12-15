@@ -9,7 +9,7 @@
 #include <time.h>
 #include <windows.h>
 #include <vector>
-//#include <fstream>
+#include <fstream>
 //#include <windows.h>
 //#include <mmsystem.h>
 #include <gl/glew.h> 
@@ -23,16 +23,15 @@
 #define WIDTH 800
 #define HEIGHT 600
 
-#define MAP_1 "MAP_1.txt"
-#define MAP_2 "MAP_2.txt"
-#define MAP_3 "MAP_3.txt"
-#define MAP_4 "MAP_4.txt"
-#define MAP_5 "MAP_5.txt"
-#define INIT "MAP_1.txt"
+//#define MAP_1 "MAP_INIT.txt"
+//#define MAP_2 "MAP_2.txt"
+//#define MAP_3 "MAP_3.txt"
+//#define MAP_4 "MAP_4.txt"
+//#define MAP_5 "MAP_5.txt"
 
 #define SHAPE_SIZE 0.5f // Enemy size
 
-#define SIZE 31 // 맵 사이즈
+#define SIZE 30 // 맵 사이즈
 #define MONSTER_SIZE 20
 using namespace std;
 
@@ -129,7 +128,6 @@ float get_time();
 float currentTime();
 bool CollisionCheck(Shape, Shape);
 bool ccollision(Shape, Shape);
-bool radius_collision(Shape, Shape);
 
 void SpecialKeyboard(int key, int x, int y); //키보드 조종
 void Keyboard(unsigned char Key, int x, int y); // 키보드 조종2
@@ -156,7 +154,7 @@ BITMAPINFO* info; // 비트맵 헤더 저장할 변수
 GLuint textures[1];
 void initTextures();
 
-int mapCollect = 0;
+int mapNumber;
 float colorbuffer[4][3] = { 0 };
 
 Shape boardShape[SIZE][SIZE];
@@ -214,6 +212,8 @@ float robot_xpos[4] = { 0, };
 float robot_ypos[4] = { 0.0f };
 float robot_zpos[4] = { 0, };
 
+int key_num = 0;
+
 Vector3 cameraDir = Vector3();
 
 Shape bombShape = Shape();
@@ -253,12 +253,6 @@ float lastFrame = 0.0f;
 bool firstMouse = true;
 float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
-
-// 충돌체크를 위한 radius 선언
-float player_radius = 1.0f;
-float enemy_radius = 0.75f;
-float bomb_radius = 0.3f;
-
 
 ////////////////////////////////////////////
 // Camera
@@ -431,7 +425,9 @@ void main(int argc, char** argv) {
     cout << "GLEW Initialized\n";
     glewInit();
 
-    Loadfile(1);
+    mapNumber = rand() % 5 + 1;
+
+    Loadfile(mapNumber);
     InitShape();
     InitBuffer();
     InitShader();
@@ -495,8 +491,8 @@ void DrawCube(Shape shape)
     glm::mat4 S = glm::mat4(1.0f);
     glm::mat4 T = glm::mat4(1.0f);
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y, shape.pos.z));
-    cubeSTR = S * T;
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 1, shape.pos.z));
+    cubeSTR = T * S;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -512,7 +508,7 @@ void Draw2ndCube(Shape shape) {
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
     T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 2 * shape.radius, shape.pos.z));
-    seccubeSTR = S * T;
+    seccubeSTR = T * S;
     unsigned int transform2ndCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transform2ndCube, 1, GL_FALSE, glm::value_ptr(seccubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -553,7 +549,7 @@ void DrawKey(Shape shape) {
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
     T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y, shape.pos.z));
-    cubeSTR = S * T;
+    cubeSTR = T * S;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -571,24 +567,16 @@ void DrawBoard()
     {
         for (int j = 0; j < SIZE; j++)
         {
-            get_bb(boardShape[i][j]);
             switch (boardShape[i][j].type) {
             case BOARD_TYPE::NONE:
                 break;
             case BOARD_TYPE::WALL:
             case BOARD_TYPE::FIXED_WALL:
                 DrawCube(boardShape[i][j]);
-                if (radius_collision(boardShape[i][j], player))
-                    printf("[%d][%d] rad wall collision\n", i, j);
                 Draw2ndCube(boardShape[i][j]);
-                //if (CollisionCheck(boardShape[i][j], player))
-                //    printf("충돌이라고오오오ㅗㅇ\n");
                 break;
             case BOARD_TYPE::ITEM:
                 DrawKey(boardShape[i][j]);
-                if (radius_collision(boardShape[i][j], player))
-                    printf("[%d][%d]rad item collision\n", i, j);
-
                 break;
             }
         }
@@ -631,6 +619,7 @@ void InitShape() {
         monster[i].dir = Vector3(uid_mDir(dre), 0.0f, uid_mDir(dre));
         monster[i].radius = 1.0f;
     }
+
     player.radius = 0.3f;
 }
 
@@ -675,11 +664,6 @@ void drawScene()
 
     for (int i = 0; i < MONSTER_SIZE; i++) {
         DrawMonster(monster[i]);
-        get_bb(monster[i]);
-        if (radius_collision(monster[i], bombShape))
-            printf("[%d] rad monster bomb collision\n", i);
-        if (radius_collision(monster[i], player))
-            printf("[%d] rad monster player collision\n", i);
     }
 
     glutPostRedisplay();
@@ -757,6 +741,12 @@ void TimerFunction(int value) {
             elapsedTime -= 0.1f;
             bombShape.pos.x += bombShape.dir.x;
             bombShape.pos.z += bombShape.dir.z;
+            // Monster Collision
+            for (int i = 0; i < MONSTER_SIZE; i++) {
+                if (CollisionCheck(monster[i], bombShape)) {
+                    printf("Collision MONSTER to BOMB\n");
+                }
+            }
             // TODO : 충돌체크 여기다 해주면 됨
         }
         else {
@@ -768,6 +758,32 @@ void TimerFunction(int value) {
         monster[i].pos.x += 0.01 * monster[i].dir.x;
         monster[i].pos.z += 0.01 * monster[i].dir.z;
     }
+
+    // Player to Board Collision
+    for (int i = 0; i < SIZE; i++)
+    {
+        for (int j = 0; j < SIZE; j++)
+        {
+            switch (boardShape[i][j].type) {
+            case BOARD_TYPE::NONE:
+                break;
+            case BOARD_TYPE::WALL:
+            case BOARD_TYPE::FIXED_WALL:
+                if (CollisionCheck(boardShape[i][j], player)) {
+                    cout << "[Collision] WALL PLAYER_" << i << "_" << j << endl;
+                }
+                break;
+            case BOARD_TYPE::ITEM:
+                if (CollisionCheck(boardShape[i][j], player)) {
+                    boardShape[i][j].type = NONE;
+                    boardShape[i][j]
+                        cout << "[Collision] ITEM PLAYER_" << i << "_" << j << endl;
+                }
+                break;
+            }
+        }
+    }
+
 
     glutTimerFunc(10, TimerFunction, 1);
 }
@@ -812,22 +828,19 @@ int Loadfile(int mapCollect)
     switch (mapCollect)
     {
     case 0:
-        fp = fopen(MAP_1, "rt");
+        fp = fopen("MAP_1.txt", "rt");
         break;
     case 1:
-        fp = fopen(MAP_2, "rt");
+        fp = fopen("MAP_2.txt", "rt");
         break;
     case 2:
-        fp = fopen(MAP_3, "rt");
+        fp = fopen("MAP_3.txt", "rt");
         break;
     case 3:
-        fp = fopen(MAP_4, "rt");
+        fp = fopen("MAP_4.txt", "rt");
         break;
     case 4:
-        fp = fopen(MAP_5, "rt");
-        break;
-    case 5:
-        fp = fopen(INIT, "rt");
+        fp = fopen("MAP_5.txt", "rt");
         break;
     }
 
@@ -837,8 +850,6 @@ int Loadfile(int mapCollect)
         printf("\n board gen fail\n");
         return 1;
     }
-
-    printf("\n완료\n");
 
     int cha;
 
@@ -860,8 +871,8 @@ int Loadfile(int mapCollect)
                     boardShape[i][j].radius = 3.0f;
                 }
                 else {
-                    boardShape[i][j].radius = 1.0f;
-                    boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
+                    boardShape[i][j].radius = 3.0f;
+                    boardShape[i][j].scale = Vector3(2.5, 2.5, 2.5);
 
                     if (boardShape[i][j].type == FIXED_WALL) {
                         boardShape[i][j].color = Vector3(0.7, 0.7, 0.7);
@@ -1049,7 +1060,7 @@ void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir, 
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
 }
 
-int debug = 0;
+
 bool CollisionCheck(Shape shape, Shape shape2) { // shpae2 : player
     Vector4 bbox = shape.GetBB();
     Vector4 bbox2 = shape2.GetBB();
@@ -1058,60 +1069,15 @@ bool CollisionCheck(Shape shape, Shape shape2) { // shpae2 : player
 
     if ((bbox.minx < bbox2.minx && bbox.maxx > bbox2.minx) ||
         ((bbox.minx < bbox2.maxx && bbox.maxx > bbox2.maxx))) {
-        debug++;
-        cout << "xcollision" << debug << endl;
         xcollision = true;
     }
 
     if ((bbox.minz < bbox2.minz && bbox.maxz > bbox2.minz) ||
         ((bbox.minz < bbox2.maxz && bbox.maxz > bbox2.maxz))) {
-        debug++;
-        cout << "zcollision" << debug << endl;
-        xcollision = true;
+        zcollision = true;
     }
-    //if ((bbox.minz < bbox2.maxz || bbox.maxz < bbox2.minz)) {
-    //    cout << "zcollision" << endl;
-    //    zcollision = true;
-    //}
-
 
     if (xcollision && zcollision) {
-        cout << "충돌" << endl;
-        return true;
-    }
-    else
-        return false;
-}
-
-bool ccollision(Shape shape, Shape bomb) {
-    Vector4 sbox = shape.GetBB();
-    Vector4 bbox = bomb.GetBB();
-
-    bool xcollision = false;
-    bool zcollision = false;
-
-    if ((bbox.minx > (sbox.minx)) && (bbox.maxx < (sbox.minx))) {
-        cout << "xcollision(bomb)" << endl;
-        xcollision = true;
-    }
-    if ((bbox.maxz > sbox.minx) && (bbox.minz < sbox.minx))
-        cout << "zcollision(bomb)" << endl;
-    zcollision = true;
-
-
-    if (xcollision && zcollision) {
-        cout << "충돌(bomb)" << endl;
-        return true;
-    }
-    else
-        return false;
-}
-
-bool radius_collision(Shape shape1, Shape shape2) {
-    float distance = (shape1.pos.x - shape2.pos.x) * (shape1.pos.x - shape2.pos.x) + (shape1.pos.y - shape2.pos.y) * (shape1.pos.y - shape2.pos.y) + (shape1.pos.z - shape2.pos.z) * (shape1.pos.z - shape2.pos.z);
-    float rad_sum_sq = (shape1.radius + shape2.radius) * (shape1.radius + shape2.radius);
-    if (distance < rad_sum_sq) {
-        printf("raius_collision!!\n");
         return true;
     }
     else

@@ -1,0 +1,41 @@
+﻿  소스.cpp
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(328,34): warning C4326: 'main'의 반환 형식이 'int'이어야 하는데 'void'입니다.
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(437,32): warning C4305: '인수': 'double'에서 'GLfloat'(으)로 잘립니다.
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(447,32): warning C4305: '인수': 'double'에서 'GLfloat'(으)로 잘립니다.
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(509,41): warning C4305: '인수': 'double'에서 'GLfloat'(으)로 잘립니다.
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(803,22): warning C4305: '=': 'int'에서 'bool'(으)로 잘립니다.
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(818,50): warning C4305: '-=': 'double'에서 'float'(으)로 잘립니다.
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(819,50): warning C4305: '-=': 'double'에서 'float'(으)로 잘립니다.
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(820,50): warning C4305: '-=': 'double'에서 'float'(으)로 잘립니다.
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(843,75): warning C4244: '+=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(844,75): warning C4244: '+=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(910,24): warning C4244: '초기화 중': 'int'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(992,71): warning C4305: '인수': 'double'에서 'float'(으)로 잘립니다.
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\[컴퓨터 그래픽스] 텀 프로젝트\소스.cpp(995,71): warning C4305: '인수': 'double'에서 'float'(으)로 잘립니다.
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewEnableVertexAttribArray
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewBindVertexArray
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewUseProgram
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewVertexAttribPointer
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewGetShaderiv
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewCompileShader
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewCreateShader
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewBindBuffer
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewCreateProgram
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewUniform1i
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewGetShaderInfoLog
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewGetProgramiv
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewGetUniformLocation
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewBufferData
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewAttachShader
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewActiveTexture
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewShaderSource
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewGenVertexArrays
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewUniformMatrix4fv
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp__glewExperimental
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewGenBuffers
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewGenerateMipmap
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewUniform3f
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewDeleteShader
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp____glewLinkProgram
+소스.obj : error LNK2001: 확인할 수 없는 외부 기호 __imp__glewInit@0
+C:\Users\sumin\source\repos\[컴퓨터 그래픽스] 텀 프로젝트\Release\[컴퓨터 그래픽스] 텀 프로젝트.exe : fatal error LNK1120: 26개의 확인할 수 없는 외부 참조입니다.
