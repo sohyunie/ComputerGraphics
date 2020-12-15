@@ -1,17 +1,12 @@
 #include "ReadObj.h"
 
-#pragma warning(disable:4996)
 #include <iostream>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <random>
 #include <time.h>
-#include <windows.h>
 #include <vector>
-#include <fstream>
-//#include <windows.h>
-//#include <mmsystem.h>
 #include <gl/glew.h> 
 #include <gl/freeglut.h>
 #include <gl/freeglut_ext.h>
@@ -19,6 +14,8 @@
 #include <gl/glm/ext.hpp>
 #include <gl/glm/gtc/matrix_transform.hpp>
 #include <gl/glm/gtc/type_ptr.hpp>
+
+#pragma warning(disable:4996)
 
 #define WIDTH 800
 #define HEIGHT 600
@@ -32,7 +29,6 @@ using namespace std;
 normal_distribution <float>uid_mColor{ 0.0,1.0 };
 normal_distribution <float>uid_mDir{ -1.0 ,1.0 };
 normal_distribution <float>uid_mPos{ 0, 100 };
-
 default_random_engine dre((size_t)time(NULL));
 
 const float BOMB_TIME = 3.0;
@@ -99,12 +95,8 @@ void make_fragmentShader();
 GLuint make_shaderProgram();
 void InitBuffer();
 void InitShader();
-void InitTexture();
-GLubyte* LoadDIBitmap(const char*, BITMAPINFO**);
 GLvoid Reshape(int, int);
 void drawScene();
-void TimerFunction(int);
-void Keyboard(unsigned char, int, int);
 void CalculateLight(float, float, float, float);
 int Loadfile(int mapCollect);
 void DrawBoard();
@@ -115,17 +107,18 @@ void throw_bomb();
 void DrawPlayer();
 void DrawCube();
 void Draw2ndCube();
-void DrawEnemy();
 void DrawKey();
 void InitShape();
 float get_time();
 float currentTime();
 bool CollisionCheck(Shape, Shape);
-bool ccollision(Shape, Shape);
 
+// GL Function
+void TimerFunction(int);
 void SpecialKeyboard(int key, int x, int y); //키보드 조종
 void Keyboard(unsigned char Key, int x, int y); // 키보드 조종2
 void releaseKey(int key, int x, int y);
+
 
 GLUquadricObj* qobj;
 
@@ -142,111 +135,30 @@ unsigned int texture[10];
 
 ///////////////////////////////////////////////////////////////
 // 맵 파일 입출력
-GLubyte* LoadDIBitmap(const char* filename, BITMAPINFO** info);
-GLubyte* pBytes; // 데이터를 가리킬 포인터
-BITMAPINFO* info; // 비트맵 헤더 저장할 변수
-GLuint textures[1];
-void initTextures();
 
 int mapNumber;
 float colorbuffer[4][3] = { 0 };
-
 Shape boardShape[SIZE][SIZE];
 Shape monster[MONSTER_SIZE];
 
-float objectSize = 1;
-bool isChanged = false;
-
 int key_sum = 0;
 
-float r;
-float g;
-float b;
+Vector3 cameraPos = Vector3(0.0f, 10.0f, 40.0f);
 
-bool isMoveX = false;
-int directionX = 0;
+Vector3 lightPos = Vector3(0.0f, 20.0f, 0.0f);
+Vector3 lightColor = Vector3(1.0f, 1.0f, 1.0f);
 
-bool isMoveZ = false;
-int directionZ = 0;
-float allAngle = 0.0f;
-
-bool isSwing = true;
-float rightAngle = 0.0f;
-int rightAngleDirection = 1;
-
-float leftAngle = 0.f;
-int leftAngleDirection = 1;
-
-float rootX = 0;
-float rootInitY = -8;
-float rootY = rootInitY;
-float rootZ = 0;
-float speed = 0.1f;
-
-float camera_x = 0.0f;
-float camera_y = 10.0f;
-float camera_z = 40.0f;
-
-float light_x = -15.0;
-float light_y = 15.0;
-float light_z = 0.0;
-
-float light_r = 1.0;
-float light_g = 1.0;
-float light_b = 1.0;
-
-random_device rd;
-//default_random_engine dre{ rd() };
 uniform_real_distribution<> random_pos_urd{ -15.0, 15.0 };
-
-float random_xpos = random_pos_urd(dre);
-float random_zpos = random_pos_urd(dre);
-float random_move_xpos = random_pos_urd(dre);
-float random_move_zpos = random_pos_urd(dre);
-
-float robot_xpos[4] = { 0, };
-float robot_ypos[4] = { 0.0f };
-float robot_zpos[4] = { 0, };
-
-Vector3 cameraDir = Vector3();
 
 Shape bombShape = Shape();
 Shape player = Shape();
 
-float enemy_xpos;
-float enemy_ypos = 0.0f;
-float enemy_zpos = -30.0f;
-
-bool robot_default_move = true;
-
-float Proj_degree = 50.0f;
-
-bool camera_rotate_mode = false;
-float rt_y = 0.0f;
-float cameraRotateangle = 0.0f;
-float cameraRotateangleY = 0.0f;
-bool camerarotate = false;
-bool camerarotateY = false;
-int cameraAngleDirection = 1;
-int cameraAngleDirectionY = 1;
-
-bool threed_mode = true;    // 시점 변환
 bool bomb_mode = false;     // 폭탄 던지기
-bool enemy_valid = false;    // enemy 살아있는지
 
 // time
 float delta_time = 0.0f;
 float lastFrame = 0.0f;
 
-// 마우스 시점 변환 관련
-//double camera_angle_h = 0;
-//double camera_angle_v = 0;
-//int drag_x_origin;
-//int drag_y_origin;
-//int dragging = 0;
-bool firstMouse = true;
-float lastX = WIDTH / 2.0f;
-float lastY = HEIGHT / 2.0f;
 
 ////////////////////////////////////////////
 // Camera
@@ -374,10 +286,6 @@ bool res_robot = loadOBJ("robot.obj", robot_vertices, robot_uvs, robot_normals);
 bool res_cube = loadOBJ("cube3.obj", cube_vertices, cube_uvs, cube_normals);
 bool res_pyramid = loadOBJ("pyramid.obj", pyramid_vertices, pyramid_uvs, pyramid_normals);
 
-float radius = 5.0f;
-float cameraX = sin(glutGet(GLUT_ELAPSED_TIME)) * radius;
-float cameraZ = cos(glutGet(GLUT_ELAPSED_TIME)) * radius;
-
 // 색 지정
 glm::vec3 Red = glm::vec3(1.0f, 0.0f, 0.0f);
 glm::vec3 Green = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -388,23 +296,7 @@ glm::vec3 Black = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 Yellow = glm::vec3(1.0f, 1.0f, 0.0f);
 glm::vec3 Brown = glm::vec3(0.6f, 0.3f, 0.0f);
 
-// 변환에 이용되는 매트릭스
-glm::mat4 S = glm::mat4(1.0f);
-glm::mat4 T = glm::mat4(1.0f);
-glm::mat4 Tx = glm::mat4(1.0f);
-glm::mat4 Rx = glm::mat4(1.0f);
-glm::mat4 Ry = glm::mat4(1.0f);
-glm::mat4 RxY = glm::mat4(1.0f);
-glm::mat4 STR = glm::mat4(1.0f);
-glm::mat4 Bomb_STR = glm::mat4(1.0f);
-glm::mat4 Robot_STR = glm::mat4(1.0f);
-glm::mat4 cubeSTR = glm::mat4(1.0f);
-glm::mat4 seccubeSTR = glm::mat4(1.0f);
-glm::mat4 EnemySTR = glm::mat4(1.0f);
-glm::mat4 view = glm::mat4(1.0f);
-
 void main(int argc, char** argv) {
-
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
     glutInitWindowPosition(500, 100);
@@ -487,7 +379,7 @@ void DrawCube(Shape shape)
     glm::mat4 T = glm::mat4(1.0f);
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
     T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 1, shape.pos.z));
-    cubeSTR = T * S;
+    glm::mat4 cubeSTR = T * S;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -503,7 +395,7 @@ void Draw2ndCube(Shape shape) {
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
     T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 2 *shape.radius, shape.pos.z));
-    seccubeSTR = T * S;
+    glm::mat4 seccubeSTR = T * S;
     unsigned int transform2ndCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transform2ndCube, 1, GL_FALSE, glm::value_ptr(seccubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -513,32 +405,27 @@ void Draw2ndCube(Shape shape) {
     glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
 }
 
+void renderBitmapString(float x, float y, float z, void* font, char* string)
+{
+    char* c;
+    glRasterPos3f(x, y, z);
+    for (c = string; *c != '\0'; c++) {
+        glutBitmapCharacter(font, *c);
+    }
+}
+
 void PrintUI()
 {
     //glClearColor(0.0, 0.0, 0.0, 0.0);
     string text = "TIME : " + to_string(currentTime()).substr(0, 4);
     const char* string = text.data();
     glColor3f(0.0f, 0.0f, 0.0f);
-    glRasterPos2f(-0.9, 0.9);  // 문자 출력할 위치 설정  
-    glColor3f(1.0f, 1.0f, 1.0f);
+    glRasterPos2f(-0.9, 0.9);  // 문자 출력할 위치 설정
     
     int len = (int)strlen(string);
-    for (int i = 0; i < len; i++)
+    for (int i = 0; i < len; i++) {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
-}
-
-void DrawEnemy() {
-    glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(1.5, 1.5, 1.5));
-    glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3(enemy_xpos, enemy_ypos, enemy_zpos));
-    EnemySTR = S * T;
-
-    unsigned int transformEnemy = glGetUniformLocation(s_program[0], "Transform");
-    glUniformMatrix4fv(transformEnemy, 1, GL_FALSE, glm::value_ptr(EnemySTR));
-    unsigned int colorEnemy = glGetUniformLocation(s_program[1], "in_Color");
-    glUniform3f(colorEnemy, Green.r, Green.g, Green.b);
-
-    glBindVertexArray(VAO[0]);
-    glDrawArrays(GL_TRIANGLES, 0, cube_vertices.size());
+    }
 }
 
 void DrawKey(Shape shape) {
@@ -547,7 +434,7 @@ void DrawKey(Shape shape) {
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
     T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y, shape.pos.z));
-    cubeSTR = T * S;
+    glm::mat4 cubeSTR = T * S;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
@@ -556,7 +443,23 @@ void DrawKey(Shape shape) {
     glBindVertexArray(VAO[2]);
     glDrawArrays(GL_TRIANGLES, 0, pyramid_vertices.size());
 
-    CalculateLight(shape.pos.x, shape.pos.y, shape.pos.z, 1.0);
+    //CalculateLight(shape.pos.x, shape.pos.y, shape.pos.z, 1.0);
+}
+
+void DrawPlain() {
+    glm::mat4 S = glm::mat4(1.0f);
+    glm::mat4 T = glm::mat4(1.0f);
+
+    S = glm::scale(glm::mat4(1.0f), glm::vec3(100, 0.03, 100));
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(0,0,0));
+    glm::mat4 cubeSTR = T * S;
+    unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
+    unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
+    glUniform3f(colorCube, 0.2,0.2,0.2);
+
+    glBindVertexArray(VAO[2]);
+    glDrawArrays(GL_TRIANGLES, 0, pyramid_vertices.size());
 }
 
 void DrawBoard()
@@ -596,8 +499,8 @@ void DrawMonster(Shape monster) {
     glm::mat4 monsterSTR = glm::mat4(1.0f);
     qobj = gluNewQuadric();
     glm::vec3 monsterPos = glm::vec3(monster.pos.x, monster.pos.y, monster.pos.z);
-    S = glm::scale(glm::mat4(1.0f), glm::vec3(4, 4, 4));
-    T = glm::translate(glm::mat4(1.0f), monsterPos);
+    glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(4, 4, 4));
+    glm::mat4 T = glm::translate(glm::mat4(1.0f), monsterPos);
     monsterSTR = S * T;
     unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(monsterSTR));
@@ -605,7 +508,7 @@ void DrawMonster(Shape monster) {
     unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
     glUniform3f(Color_Bomb, monster.color.x, monster.color.y, monster.color.z);
 
-    CalculateLight(monsterPos.x, monsterPos.y, monsterPos.z, 1.0);
+    //CalculateLight(monsterPos.x, monsterPos.y, monsterPos.z, 1.0);
 
     gluSphere(qobj, 1.0, 20, 20);
 }
@@ -621,19 +524,18 @@ void InitShape() {
     player.radius = 0.3f;
 }
 
-
 void drawScene()
 {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     PrintUI();
-
+    
     glUseProgram(s_program[0]);
     glUseProgram(s_program[1]);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    CalculateLight(light_x, light_y, light_z, 0.5);
+    
+    CalculateLight(lightPos.x, lightPos.y, lightPos.z, 0.5);
 
     if (deltaAngle)
         computeDir(deltaAngle);
@@ -650,6 +552,8 @@ void drawScene()
         yPos *= 20;
     }
     CameraSetting(s_program[0], player.pos, dir, yPos);
+
+    DrawPlain();
     DrawBoard();
     DrawPlayer(player);
     
@@ -702,11 +606,6 @@ void Keyboard(unsigned char key, int x, int y) {
             bombShape.dir = Vector3(lx, ly, lz);
             bomb_mode = true;
         }
-        break;
-    case 'e':
-        random_xpos = random_pos_urd(dre);
-        enemy_xpos = random_xpos;
-        enemy_valid = true;
         break;
     }
 }
@@ -807,16 +706,16 @@ float currentTime() {
 void throw_bomb() {
     qobj = gluNewQuadric();
     glm::vec3 bomb_pos = glm::vec3(bombShape.pos.x, bombShape.pos.y, bombShape.pos.z);
-    S = glm::scale(glm::mat4(1.0f), glm::vec3(1.0, 1.0, 1.0));
-    T = glm::translate(glm::mat4(1.0f), bomb_pos);
-    Bomb_STR = S * T;
+    glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(1.0, 1.0, 1.0));
+    glm::mat4 T = glm::translate(glm::mat4(1.0f), bomb_pos);
+    glm::mat4 Bomb_STR = S * T;
     unsigned int Bomb = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(Bomb, 1, GL_FALSE, glm::value_ptr(Bomb_STR));
 
     unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
     glUniform3f(Color_Bomb, Red.r, Red.g, Red.b);
 
-    CalculateLight(bomb_pos.x, bomb_pos.y, bomb_pos.z, 1.0);
+    //CalculateLight(bomb_pos.x, bomb_pos.y, bomb_pos.z, 1.0);
 
     gluSphere(qobj, 0.5, 20, 20);
 }
@@ -1035,10 +934,10 @@ void CalculateLight(float lgt_x, float lgt_y, float lgt_z, float amb) {
     glUniform3f(light_pos, lgt_x, lgt_y, lgt_z);
 
     unsigned int light_color = glGetUniformLocation(s_program[0], "lightColor");
-    glUniform3f(light_color, light_r, light_g, light_b);
+    glUniform3f(light_color, lightColor.x, lightColor.y, lightColor.z);
 
     unsigned int view_pos = glGetUniformLocation(s_program[0], "viewPos");
-    glUniform3f(view_pos, camera_x, camera_y, camera_z);
+    glUniform3f(view_pos, player.pos.x, player.pos.y, player.pos.z);
 
     unsigned int ambientLight_on = glGetUniformLocation(s_program[0], "ambientLight_on_off");
     glUniform3f(ambientLight_on, amb, amb, amb);
