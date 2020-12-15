@@ -517,10 +517,13 @@ void Draw2ndCube(Shape shape) {
 
 void PrintUI()
 {
-    glColor3f(1.0f, 1.0f, 1.0f);
+    //glClearColor(0.0, 0.0, 0.0, 0.0);
     string text = "TIME : " + to_string(currentTime()).substr(0, 4);
     const char* string = text.data();
+    glColor3f(0.0f, 0.0f, 0.0f);
     glRasterPos2f(-0.9, 0.9);  // 문자 출력할 위치 설정  
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
     int len = (int)strlen(string);
     for (int i = 0; i < len; i++)
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
@@ -754,6 +757,9 @@ void TimerFunction(int value) {
     for (int i = 0; i < MONSTER_SIZE; ++i) {
         monster[i].pos.x += 0.01 * monster[i].dir.x;
         monster[i].pos.z += 0.01 * monster[i].dir.z;
+        if (CollisionCheck(monster[i], player)) {
+            cout << "Monster and Player collide" << endl;
+        }
     }
 
     // Player to Board Collision
