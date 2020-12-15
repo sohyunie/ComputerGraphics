@@ -33,7 +33,7 @@
 #define SHAPE_SIZE 0.5f // Enemy size
 
 #define SIZE 31 // 맵 사이즈
-#define MONSTER_SIZE 10
+#define MONSTER_SIZE 20
 using namespace std;
 
 normal_distribution <float>uid_mColor{ 0.0,1.0 };
@@ -124,10 +124,10 @@ void DrawCube();
 void Draw2ndCube();
 void DrawEnemy();
 void DrawKey();
-void InitMonster();
+void InitShape();
 float get_time();
 float currentTime();
-bool collision(Shape, float, float);
+bool CollisionCheck(Shape, Shape);
 bool ccollision(Shape, Shape);
 
 void SpecialKeyboard(int key, int x, int y); //키보드 조종
@@ -213,13 +213,10 @@ float robot_xpos[4] = { 0, };
 float robot_ypos[4] = { 0.0f };
 float robot_zpos[4] = { 0, };
 
-float player_xpos = 0.0f;
-float player_ypos = 0.0f;
-float player_zpos = 20.0f;
-
 Vector3 cameraDir = Vector3();
 
 Shape bombShape = Shape();
+Shape player = Shape();
 
 float enemy_xpos;
 float enemy_ypos = 0.0f;
@@ -255,8 +252,6 @@ float lastFrame = 0.0f;
 bool firstMouse = true;
 float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
-
-float bomb_z_pos = player_zpos - 5.0;
 
 // 충돌체크를 위한 radius 선언
 float player_radius = 1.0f;
@@ -436,7 +431,7 @@ void main(int argc, char** argv) {
     glewInit();
 
     Loadfile(1);
-    InitMonster();
+    InitShape();
     InitBuffer();
     InitShader();
 
@@ -453,7 +448,7 @@ void main(int argc, char** argv) {
 }
 
 // 플레이어 그리기 함수
-void DrawPlayer()
+void DrawPlayer(Shape player)
 {
     glm::mat4 STR = glm::mat4(1.0f);
     glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(0.7, 0.7, 0.7));
@@ -463,7 +458,7 @@ void DrawPlayer()
     //glRotatef(180 - (angle + deltaAngle) * 180.0 / 3.14, 0.0, 1.0, 0.0);
 
     glm::mat4 cubeSTR = glm::mat4(1.0f);
-    glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3((float)player_xpos, (float)player_ypos, (float)player_zpos));
+    glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3((float)player.pos.x, (float)player.pos.y, (float)player.pos.z));
     cubeSTR = T * Ry * S;
     unsigned int Player = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(Player, 1, GL_FALSE, glm::value_ptr(cubeSTR));
@@ -583,11 +578,13 @@ void DrawBoard()
             case BOARD_TYPE::FIXED_WALL:
                 DrawCube(boardShape[i][j]);
                 Draw2ndCube(boardShape[i][j]);
-                if (collision(boardShape[i][j], player_xpos, player_zpos))
-                    printf("충돌이라고오오오ㅗㅇ\n");
+                //if (CollisionCheck(boardShape[i][j], player))
+                //    printf("충돌이라고오오오ㅗㅇ\n");
                 break;
             case BOARD_TYPE::ITEM:
                 DrawKey(boardShape[i][j]);
+                if (CollisionCheck(boardShape[i][j], player))
+                    printf("충돌이라고오오오ㅗㅇ\n");
                 break;
             }
         }
@@ -596,8 +593,8 @@ void DrawBoard()
 
 void computePos(float deltaMove)
 {
-    player_xpos += deltaMove * lx * 0.01f;
-    player_zpos += deltaMove * lz * 0.01f;
+    player.pos.x += deltaMove * lx * 0.01f;
+    player.pos.z += deltaMove * lz * 0.01f;
 }
 void computeDir(float deltaAngle) {
     angle += deltaAngle;
@@ -623,13 +620,15 @@ void DrawMonster(Shape monster) {
     gluSphere(qobj, 1.0, 20, 20);
 }
 
-void InitMonster() {
+void InitShape() {
     for (int i = 0; i < MONSTER_SIZE; i++) {
         monster[i].pos = Vector3(uid_mPos(dre), 1.0f, uid_mPos(dre));
         monster[i].color = Vector3(uid_mColor(dre), uid_mColor(dre), uid_mColor(dre));
         monster[i].dir = Vector3(uid_mDir(dre), 0.0f, uid_mDir(dre));
         monster[i].radius = 1.0f;
     }
+
+    player.radius = 0.3f;
 }
 
 
@@ -655,14 +654,14 @@ void drawScene()
     Vector3 dir = Vector3();
     float yPos = 5.0f;
     if (!isFPS)
-        dir = Vector3(player_xpos + lx * 100, player_ypos + ly, player_zpos + lz * 100);
+        dir = Vector3(player.pos.x + lx * 100, player.pos.y + ly, player.pos.z + lz * 100);
     else {
-        dir = Vector3(player_xpos + lx, player_ypos + ly, player_zpos + lz);
+        dir = Vector3(player.pos.x + lx, player.pos.y + ly, player.pos.z + lz);
         yPos *= 20;
     }
-    CameraSetting(s_program[0], Vector3(player_xpos, player_ypos, player_zpos), dir, yPos);
+    CameraSetting(s_program[0], player.pos, dir, yPos);
     DrawBoard();
-    DrawPlayer();
+    DrawPlayer(player);
     
     // 폭탄
     if (bomb_mode) {
@@ -712,7 +711,7 @@ void Keyboard(unsigned char key, int x, int y) {
     case 'b':
         // 일단 보이는것만.. b로 구현함 ㅠㅠ
         if (!bomb_mode) {
-            bombShape.pos = Vector3(player_xpos, player_ypos, player_zpos);
+            bombShape.pos = player.pos;
             bombShape.dir = Vector3(lx, ly, lz);
             bomb_mode = true;
         }
@@ -1045,21 +1044,34 @@ void CameraSetting(GLuint s_program, Vector3 cameraPosition, Vector3 cameraDir, 
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
 }
 
-bool collision(Shape shape, float x, float z) {
+int debug = 0;
+bool CollisionCheck(Shape shape, Shape shape2) { // shpae2 : player
     Vector4 bbox = shape.GetBB();
+    Vector4 bbox2 = shape2.GetBB();
     bool xcollision = false;
     bool zcollision = false;
-
-    if ((bbox.minx > (x + 1.0)) && (bbox.maxx < (x - 1.0))) {
-        printf("xcollision\n");
+    
+    if ((bbox.minx < bbox2.minx && bbox.maxx > bbox2.minx) ||
+    ((bbox.minx < bbox2.maxx && bbox.maxx > bbox2.maxx))) {
+        debug++;
+        cout<< "xcollision" << debug << endl;
         xcollision = true;
     }
-    if ((bbox.maxz > (z + 1.0)) && (bbox.minz < (z - 1.0)))
-        zcollision = true;
+
+    if ((bbox.minz < bbox2.minz && bbox.maxz > bbox2.minz) ||
+        ((bbox.minz < bbox2.maxz && bbox.maxz > bbox2.maxz))) {
+        debug++;
+        cout << "zcollision" << debug << endl;
+        xcollision = true;
+    }
+    //if ((bbox.minz < bbox2.maxz || bbox.maxz < bbox2.minz)) {
+    //    cout << "zcollision" << endl;
+    //    zcollision = true;
+    //}
 
 
     if (xcollision && zcollision) {
-        printf("충돌\n");
+        cout << "충돌" << endl;
         return true;
     }
     else
@@ -1074,15 +1086,16 @@ bool ccollision(Shape shape, Shape bomb) {
     bool zcollision = false;
 
     if ((bbox.minx > (sbox.minx)) && (bbox.maxx < (sbox.minx))) {
-        printf("xcollision\n");
+        cout << "xcollision(bomb)" << endl;
         xcollision = true;
     }
     if ((bbox.maxz > sbox.minx) && (bbox.minz < sbox.minx))
+        cout << "zcollision(bomb)" << endl;
         zcollision = true;
 
 
     if (xcollision && zcollision) {
-        printf("충돌\n");
+        cout << "충돌(bomb)" << endl;
         return true;
     }
     else
