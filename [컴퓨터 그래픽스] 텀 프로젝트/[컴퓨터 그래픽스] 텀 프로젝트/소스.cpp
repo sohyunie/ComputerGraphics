@@ -129,6 +129,7 @@ float get_time();
 float currentTime();
 bool CollisionCheck(Shape, Shape);
 bool ccollision(Shape, Shape);
+bool radius_collision(Shape, Shape);
 
 void SpecialKeyboard(int key, int x, int y); //키보드 조종
 void Keyboard(unsigned char Key, int x, int y); // 키보드 조종2
@@ -577,14 +578,17 @@ void DrawBoard()
             case BOARD_TYPE::WALL:
             case BOARD_TYPE::FIXED_WALL:
                 DrawCube(boardShape[i][j]);
+                if (radius_collision(boardShape[i][j], player))
+                    printf("[%d][%d] rad wall collision\n", i, j);
                 Draw2ndCube(boardShape[i][j]);
                 //if (CollisionCheck(boardShape[i][j], player))
                 //    printf("충돌이라고오오오ㅗㅇ\n");
                 break;
             case BOARD_TYPE::ITEM:
                 DrawKey(boardShape[i][j]);
-                if (CollisionCheck(boardShape[i][j], player))
-                    printf("충돌이라고오오오ㅗㅇ\n");
+                if (radius_collision(boardShape[i][j], player))
+                    printf("[%d][%d]rad item collision\n", i, j);
+
                 break;
             }
         }
@@ -627,7 +631,6 @@ void InitShape() {
         monster[i].dir = Vector3(uid_mDir(dre), 0.0f, uid_mDir(dre));
         monster[i].radius = 1.0f;
     }
-
     player.radius = 0.3f;
 }
 
@@ -673,8 +676,10 @@ void drawScene()
     for (int i = 0; i < MONSTER_SIZE; i++) {
         DrawMonster(monster[i]);
         get_bb(monster[i]);
-        if (ccollision(monster[i], bombShape))
-            printf("제발좀\n");
+        if (radius_collision(monster[i], bombShape))
+            printf("[%d] rad monster bomb collision\n", i);
+        if (radius_collision(monster[i], player))
+            printf("[%d] rad monster player collision\n", i);
     }
 
     glutPostRedisplay();
@@ -1096,6 +1101,17 @@ bool ccollision(Shape shape, Shape bomb) {
 
     if (xcollision && zcollision) {
         cout << "충돌(bomb)" << endl;
+        return true;
+    }
+    else
+        return false;
+}
+
+bool radius_collision(Shape shape1, Shape shape2) {
+    float distance = (shape1.pos.x - shape2.pos.x) * (shape1.pos.x - shape2.pos.x) + (shape1.pos.y - shape2.pos.y) * (shape1.pos.y - shape2.pos.y) +  (shape1.pos.z - shape2.pos.z) * (shape1.pos.z - shape2.pos.z);
+    float rad_sum_sq = (shape1.radius + shape2.radius) * (shape1.radius + shape2.radius);
+    if (distance < rad_sum_sq) {
+        printf("raius_collision!!\n");
         return true;
     }
     else
