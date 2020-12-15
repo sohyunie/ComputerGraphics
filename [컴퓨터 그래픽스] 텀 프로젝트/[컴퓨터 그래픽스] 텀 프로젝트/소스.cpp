@@ -31,13 +31,14 @@
 #define SOUND_FILE_NAME_BGM_1	"../sound/backgroundmusic.wav"
 using namespace std;
 
-normal_distribution <float>uid_mColor{ 0.0,1.0 };
-normal_distribution <float>uid_mSpeed{ 8.0 ,10.0 };
-normal_distribution <float>uid_mDir{ -1.0 , 1.0 };
-normal_distribution <float>uid_mPos{ -60.0, 60.0 };
+normal_distribution <float>uid_mColor{ 0.0,1.0 };   // 적의 색
+normal_distribution <float>uid_mSpeed{ 8.0 ,10.0 }; // 적의 속도
+normal_distribution <float>uid_mDir{ -1.0 , 1.0 };  // 적의 방향
+normal_distribution <float>uid_mPos{ -60.0, 60.0 }; // 적의 초기위치
 default_random_engine dre((size_t)time(NULL));
 
 const float BOMB_TIME = 3.0;
+const float VIEW_TIME = 10.0f;
 
 struct Vector3 {
     float x;
@@ -74,6 +75,8 @@ enum BOARD_TYPE {
     NONE = 0,
     WALL = 1,
     ITEM = 2,
+    TIME_ITEM = 3,
+    VIEW_ITEM = 4,
     FIXED_WALL = 5,
 };
 
@@ -119,7 +122,7 @@ void DrawPlayer();
 void DrawCube();
 void Draw2ndCube();
 void DrawKey();
-void InitGame();
+void InitGame(int num);
 void InitShape();
 float get_time();
 float currentTime();
@@ -159,13 +162,16 @@ uniform_real_distribution<> random_pos_urd{ -15.0, 15.0 };
 
 Shape bombShape = Shape();
 Shape player = Shape();
+float InGameTime = 0;
 
 bool bomb_mode = false;     // 폭탄 던지기
 
 // time
 float delta_time = 0.0f;
 float lastFrame = 0.0f;
-float penaltyTime = 0.0f;
+float addtionalTime = 0.0f;
+bool isViewItem = false;
+int viewItemCount = 0;
 bool isPlayGame = true;
 bool isClear = false;
 
@@ -449,11 +455,20 @@ void PrintUI()
         }
     }
     else {
+        string text = "SPACE BAR를 누르면 재시작 가능합니다.";
+        const char* string = text.data();
+        glColor3f(0.5f, 0.5f, 0.5f);
+        glRasterPos2f(-0.2, -0.2);  // 문자 출력할 위치 설정
+
+        int len = (int)strlen(string);
+        for (int i = 0; i < len; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, string[i]);
+        }
         if (isClear) {
-            string text = "GAME CLEAR";
+            text = "GAME CLEAR";
             const char* string = text.data();
             glColor3f(0.5f, 0.5f, 0.5f);
-            glRasterPos2f(0.0, 0.0);  // 문자 출력할 위치 설정
+            glRasterPos2f(-0.2, 0.0);  // 문자 출력할 위치 설정
 
             int len = (int)strlen(string);
             for (int i = 0; i < len; i++) {
@@ -461,10 +476,10 @@ void PrintUI()
             }
         }
         else {
-            string text = "GAME OVER";
+            text = "GAME OVER";
             const char* string = text.data();
             glColor3f(0.5f, 0.5f, 0.5f);
-            glRasterPos2f(0.0, 0.0);  // 문자 출력할 위치 설정
+            glRasterPos2f(-0.2, 0.0);  // 문자 출력할 위치 설정
 
             int len = (int)strlen(string);
             for (int i = 0; i < len; i++) {
@@ -525,13 +540,17 @@ void DrawBoard()
                 break;
             case BOARD_TYPE::ITEM:
                 DrawKey(boardShape[i][j]);
+            case BOARD_TYPE::TIME_ITEM:
+                DrawKey(boardShape[i][j]);
+            case BOARD_TYPE::VIEW_ITEM:
+                DrawKey(boardShape[i][j]);
                 break;
             }
         }
     }
 }
 
-void InitGame()
+void InitGame(int num)
 {
     for (int i = 0; i < SIZE; i++)
     {
@@ -541,6 +560,7 @@ void InitGame()
         }
     }
 
+    Loadfile(num);
     for (int i = 0; i < MONSTER_SIZE; i++)
         monster[i].isAlive = false;
 
@@ -595,16 +615,21 @@ void InitShape() {
 
 void drawScene()
 {
-    glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
+    if (!isPlayGame) {
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    }
+    else {
+        glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
+    }
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     CalculateLight(lightPos.x, lightPos.y, lightPos.z, 0.0);
     PrintUI();
-    
+
     glUseProgram(s_program[0]);
     glUseProgram(s_program[1]);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    
+
     CalculateLight(lightPos.x, lightPos.y, lightPos.z, 0.5);
 
     if (deltaAngle)
@@ -621,12 +646,17 @@ void drawScene()
         dir = Vector3(player.pos.x + lx, player.pos.y + ly, player.pos.z + lz);
         yPos *= 20;
     }
-    CameraSetting(s_program[0], player.pos, dir, yPos);
+
+    if (isPlayGame)
+        CameraSetting(s_program[0], player.pos, dir, yPos);
+    else
+        CameraSetting(s_program[0], Vector3(1000, 1000, 1000), dir, yPos);
 
     DrawPlain();
     DrawBoard();
     DrawPlayer(player);
-    
+
+
     // 폭탄
     if (bomb_mode) {
         throw_bomb();
@@ -652,15 +682,33 @@ void releaseKey(int key, int x, int y) {
     }
 }
 
+void RestartGame() {
+    isClear = false;
+    isPlayGame = true;
+    isFPS = false;
+    key_sum = 0;
+    Loadfile(0);
+    InitShape();
+    addtionalTime = 0;
+    InGameTime = 0;
+    player.pos = Vector3(0,0,0);
+}
+ 
 void Keyboard(unsigned char key, int x, int y) {
-    if (!isPlayGame)
+    if (!isPlayGame) {
+        if (key == ' ') {
+            RestartGame();
+        }
         return;
+    }
     switch (key) {
     case '1':
-        isFPS = false;
+        if(isViewItem)
+            isFPS = false;
         break;
     case '3':
-        isFPS = true;
+        if (isViewItem)
+            isFPS = true;
         break;
     case 'b':
         // 일단 보이는것만.. b로 구현함 ㅠㅠ
@@ -675,8 +723,9 @@ void Keyboard(unsigned char key, int x, int y) {
 
 void SpecialKeyboard(int key, int xx, int yy)
 {
-    if (!isPlayGame)
+    if (!isPlayGame) {
         return;
+    }
 
     if (key == GLUT_KEY_LEFT)
     {
@@ -696,16 +745,32 @@ void SpecialKeyboard(int key, int xx, int yy)
     }
     glutPostRedisplay();
 }
-
 float elapsedTime;
+float elapsedFPSTime = VIEW_TIME;
 Vector3 priorPos = Vector3();
 void TimerFunction(int value) {
+    get_time();
+
+    InGameTime += delta_time;
+
     if (isPlayGame) {
         if (currentTime() < 0) {
             // GameOver;
-            InitGame();
+            InitGame(2);
             isPlayGame = false;
             isFPS = 3;
+        }
+
+        if (isFPS == true) {
+           elapsedFPSTime -= 0.1;
+           if (0 > elapsedFPSTime) {
+               viewItemCount++;
+               isFPS = false;
+               elapsedFPSTime = VIEW_TIME;
+               if (viewItemCount >= 1) {
+                   isViewItem = true;
+               }
+           }
         }
 
         if (bomb_mode) {
@@ -750,7 +815,7 @@ void TimerFunction(int value) {
             if (CollisionCheck(monster[i], player)) {
                 monster[i].pos.x += lx * 10;
                 monster[i].pos.z += lz * 10;
-                penaltyTime -= 10.f;
+                addtionalTime -= 10.f;
                 cout << "Monster and Player collide" << endl;
             }
         }
@@ -790,11 +855,27 @@ void TimerFunction(int value) {
                         boardShape[i][j].type = NONE;
                         key_sum++;
                         if (key_sum >= MAX_ITEM) {
-                            InitGame();
+                            InitGame(1);
                             isPlayGame = false;
                             isClear = true;
                         }
                         cout << "[Collision] ITEM PLAYER_" << i << "_" << j << endl;
+                        cout << "현재 아이템 SCORE : " << key_sum << endl;
+                    }
+                    break;
+                case BOARD_TYPE::TIME_ITEM:
+                    if (CollisionCheck(boardShape[i][j], player)) {
+                        boardShape[i][j].type = NONE;
+                        addtionalTime += 5.0f;
+                        cout << "[Collision] TIME ITEM PLAYER_" << i << "_" << j << endl;
+                    }
+                    break;
+                case BOARD_TYPE::VIEW_ITEM:
+                    if (CollisionCheck(boardShape[i][j], player)) {
+                        boardShape[i][j].type = NONE;
+                        isFPS = true;
+
+                        cout << "[Collision] VIEW ITEM PLAYER_" << i << "_" << j << endl;
                         cout << "현재 아이템 SCORE : " << key_sum << endl;
                     }
                     break;
@@ -813,12 +894,11 @@ float get_time()
     float currentFrame = glutGet(GLUT_ELAPSED_TIME);
     delta_time = currentFrame - lastFrame;
     lastFrame = currentFrame;
-
     return lastFrame;
 }
 
 float currentTime() {
-    return MAX_TIME - round(get_time() / 100) / 10 + penaltyTime;
+    return MAX_TIME - round(InGameTime / 100) / 10 + addtionalTime;
 }
 
 // 폭탄
@@ -848,10 +928,10 @@ int Loadfile(int mapCollect)
         fp = fopen("MAP_1.txt", "rt");
         break;
     case 1:
-        fp = fopen("MAP_2.txt", "rt");
+        fp = fopen("CLEAR_MAP.txt", "rt");
         break;
     case 2:
-        fp = fopen("MAP_3.txt", "rt");
+        fp = fopen("GAMEOVER_MAP.txt", "rt");
         break;
     case 3:
         fp = fopen("MAP_4.txt", "rt");
@@ -882,21 +962,33 @@ int Loadfile(int mapCollect)
 
                 boardShape[i][j].pos = Vector3((i * 7.5f - 35), 0, (j * 7.5f - 35));
 
-                if (boardShape[i][j].type == ITEM) {
+
+                switch (boardShape[i][j].type) {
+                case BOARD_TYPE::ITEM : 
                     boardShape[i][j].color = Vector3(Yellow.r, Yellow.g, Yellow.b);
                     boardShape[i][j].scale = Vector3(1.0, 1.0, 1.0);
                     boardShape[i][j].radius = 3.5f;
-                }
-                else {
+                    break;
+                case BOARD_TYPE::TIME_ITEM:
+                    boardShape[i][j].color = Vector3(Red.r, Red.g, Red.b);
+                    boardShape[i][j].scale = Vector3(1.0, 1.0, 1.0);
+                    boardShape[i][j].radius = 3.5f;
+                    break;
+                case BOARD_TYPE::VIEW_ITEM:
+                    boardShape[i][j].color = Vector3(Blue.r, Blue.g, Blue.b);
+                    boardShape[i][j].scale = Vector3(1.0, 1.0, 1.0);
+                    boardShape[i][j].radius = 3.5f;
+                    break;
+                case BOARD_TYPE::FIXED_WALL:
                     boardShape[i][j].radius = 3.5f;
                     boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
-
-                    if (boardShape[i][j].type == FIXED_WALL) {
-                        boardShape[i][j].color = Vector3(0.7, 0.7, 0.7);
-                    }
-                    else {
-                        boardShape[i][j].color = Vector3(0.3, 0.3, 0.3);
-                    }
+                    boardShape[i][j].color = Vector3(0.7, 0.7, 0.7);
+                    break;
+                case BOARD_TYPE::WALL:
+                    boardShape[i][j].radius = 3.5f;
+                    boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
+                    boardShape[i][j].color = Vector3(0.3, 0.3, 0.3);
+                    break;
                 }
             }
         }
