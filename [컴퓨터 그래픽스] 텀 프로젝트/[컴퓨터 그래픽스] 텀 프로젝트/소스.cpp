@@ -23,21 +23,15 @@
 #define WIDTH 800
 #define HEIGHT 600
 
-//#define MAP_1 "MAP_INIT.txt"
-//#define MAP_2 "MAP_2.txt"
-//#define MAP_3 "MAP_3.txt"
-//#define MAP_4 "MAP_4.txt"
-//#define MAP_5 "MAP_5.txt"
-
 #define SHAPE_SIZE 0.5f // Enemy size
 
 #define SIZE 30 // 맵 사이즈
-#define MONSTER_SIZE 20
+#define MONSTER_SIZE 100
 using namespace std;
 
 normal_distribution <float>uid_mColor{ 0.0,1.0 };
 normal_distribution <float>uid_mDir{ -1.0 ,1.0 };
-normal_distribution <float>uid_mPos{ -20, 20 };
+normal_distribution <float>uid_mPos{ 0, 100 };
 
 default_random_engine dre((size_t)time(NULL));
 
@@ -162,6 +156,8 @@ Shape monster[MONSTER_SIZE];
 
 float objectSize = 1;
 bool isChanged = false;
+
+int key_sum = 0;
 
 float r;
 float g;
@@ -462,6 +458,7 @@ void DrawPlayer(Shape player)
 
     glBindVertexArray(VAO[1]);
     glDrawArrays(GL_TRIANGLES, 0, robot_vertices.size());
+    cout << player.pos.x << ", " << player.pos.z << endl;
 }
 
 void get_bb(Shape shape) {
@@ -777,8 +774,12 @@ void TimerFunction(int value) {
                     cout << "[Collision] WALL PLAYER_" << i << "_" << j << endl;
                 break;
             case BOARD_TYPE::ITEM:
-                if (CollisionCheck(boardShape[i][j], player))
+                if (CollisionCheck(boardShape[i][j], player)) {
+                    boardShape[i][j].type = NONE;
+                    key_sum++;
                     cout << "[Collision] ITEM PLAYER_" << i << "_" << j << endl;
+                    cout << "현재 아이템 SCORE : " << key_sum << endl;
+                }
                 break;
             }
         }
