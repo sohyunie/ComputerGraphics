@@ -1,3 +1,5 @@
+#define STB_IMAGE_IMPLEMENTATION
+#include"stb_image.h"
 #include "ReadObj.h"
 
 #include <iostream>
@@ -107,6 +109,7 @@ void make_fragmentShader();
 GLuint make_shaderProgram();
 void InitBuffer();
 void InitShader();
+void InitText();
 GLvoid Reshape(int, int);
 void drawScene();
 void CalculateLight(float, float, float, float);
@@ -153,6 +156,8 @@ Shape monster[MONSTER_SIZE];
 
 int key_sum = 0;
 
+unsigned int texture[10];
+
 Vector3 cameraPos = Vector3(0.0f, 10.0f, 40.0f);
 
 Vector3 lightPos = Vector3(0.0f, 20.0f, 0.0f);
@@ -175,6 +180,10 @@ int viewItemCount = 0;
 bool isPlayGame = true;
 bool isClear = false;
 
+unsigned int flaglocation;
+
+bool isRestart = false;
+bool isOver = false;
 
 ////////////////////////////////////////////
 // Camera
@@ -333,6 +342,7 @@ void main(int argc, char** argv) {
     InitShape();
     InitBuffer();
     InitShader();
+    InitText();
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -369,24 +379,6 @@ void DrawPlayer(Shape player)
     //cout << player.pos.x << ", " << player.pos.z << endl;
 }
 
-void get_bb(Shape shape) {
-    glPushMatrix();
-    {
-        glTranslatef(shape.pos.x, 1, shape.pos.z);
-        glLineWidth(7);
-        glBegin(GL_LINE_LOOP);
-        {
-            glVertex3f(-shape.radius, 2, shape.radius);
-            glVertex3f(-shape.radius, 2, -shape.radius);
-            glVertex3f(shape.radius, 2, -shape.radius);
-            glVertex3f(shape.radius, 2, shape.radius);
-        }
-        glEnd();
-        glLineWidth(1);
-    }
-    glPopMatrix();
-}
-
 // 큐브 그리기 함수 -> 맵 그릴 때 사용
 void DrawCube(Shape shape)
 {
@@ -410,7 +402,7 @@ void Draw2ndCube(Shape shape) {
     glm::mat4 T = glm::mat4(1.0f);
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(shape.scale.x, shape.scale.y, shape.scale.z));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 2 *shape.radius, shape.pos.z));
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(shape.pos.x, shape.pos.y + 2 * shape.radius, shape.pos.z));
     glm::mat4 seccubeSTR = T * S;
     unsigned int transform2ndCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transform2ndCube, 1, GL_FALSE, glm::value_ptr(seccubeSTR));
@@ -454,39 +446,39 @@ void PrintUI()
             glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, string[i]);
         }
     }
-    else {
-        string text = "SPACE BAR를 누르면 재시작 가능합니다.";
-        const char* string = text.data();
-        glColor3f(0.5f, 0.5f, 0.5f);
-        glRasterPos2f(-0.2, -0.2);  // 문자 출력할 위치 설정
+    //else {
+    //    string text = "SPACE BAR를 누르면 재시작 가능합니다.";
+    //    const char* string = text.data();
+    //    glColor3f(0.5f, 0.5f, 0.5f);
+    //    glRasterPos2f(-0.2, -0.2);  // 문자 출력할 위치 설정
 
-        int len = (int)strlen(string);
-        for (int i = 0; i < len; i++) {
-            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, string[i]);
-        }
-        if (isClear) {
-            text = "GAME CLEAR";
-            const char* string = text.data();
-            glColor3f(0.5f, 0.5f, 0.5f);
-            glRasterPos2f(-0.2, 0.0);  // 문자 출력할 위치 설정
+    //    int len = (int)strlen(string);
+    //    for (int i = 0; i < len; i++) {
+    //        glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, string[i]);
+    //    }
+    //    if (isClear) {
+    //        text = "GAME CLEAR";
+    //        const char* string = text.data();
+    //        glColor3f(0.5f, 0.5f, 0.5f);
+    //        glRasterPos2f(-0.2, 0.0);  // 문자 출력할 위치 설정
 
-            int len = (int)strlen(string);
-            for (int i = 0; i < len; i++) {
-                glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, string[i]);
-            }
-        }
-        else {
-            text = "GAME OVER";
-            const char* string = text.data();
-            glColor3f(0.5f, 0.5f, 0.5f);
-            glRasterPos2f(-0.2, 0.0);  // 문자 출력할 위치 설정
+    //        int len = (int)strlen(string);
+    //        for (int i = 0; i < len; i++) {
+    //            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, string[i]);
+    //        }
+    //    }
+    //    else {
+    //        text = "GAME OVER";
+    //        const char* string = text.data();
+    //        glColor3f(0.5f, 0.5f, 0.5f);
+    //        glRasterPos2f(-0.2, 0.0);  // 문자 출력할 위치 설정
 
-            int len = (int)strlen(string);
-            for (int i = 0; i < len; i++) {
-                glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, string[i]);
-            }
-        }
-    }
+    //        int len = (int)strlen(string);
+    //        for (int i = 0; i < len; i++) {
+    //            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, string[i]);
+    //        }
+    //    }
+    //}
 
 }
 
@@ -513,12 +505,12 @@ void DrawPlain() {
     glm::mat4 T = glm::mat4(1.0f);
 
     S = glm::scale(glm::mat4(1.0f), glm::vec3(100, 0.03, 100));
-    T = glm::translate(glm::mat4(1.0f), glm::vec3(0,0,0));
+    T = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
     glm::mat4 cubeSTR = T * S;
     unsigned int transformCube = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(transformCube, 1, GL_FALSE, glm::value_ptr(cubeSTR));
     unsigned int colorCube = glGetUniformLocation(s_program[1], "in_Color");
-    glUniform3f(colorCube, 0.2,0.2,0.2);
+    glUniform3f(colorCube, 0.2, 0.2, 0.2);
 
     glBindVertexArray(VAO[2]);
     glDrawArrays(GL_TRIANGLES, 0, pyramid_vertices.size());
@@ -598,7 +590,7 @@ void DrawMonster(Shape monster) {
 }
 
 void InitShape() {
-    PlaySound(TEXT(SOUND_FILE_NAME_BGM_1), NULL, SND_ASYNC | SND_SYNC);
+    //PlaySound(TEXT(SOUND_FILE_NAME_BGM_1), NULL, SND_ASYNC | SND_SYNC);
 
     for (int i = 0; i < MONSTER_SIZE; i++) {
         monster[i].pos = Vector3(130 + uid_mPos(dre), 1.5f, 130 + uid_mPos(dre));
@@ -611,6 +603,79 @@ void InitShape() {
 
     bombShape.pos.y = 2.0f;
     player.radius = 0.3f;
+}
+
+void DrawGameOverImage() {
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 0.5f);
+    glm::vec3 cameraDir = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.5f);
+
+    glm::mat4 T = glm::mat4(1.0f);
+    glm::mat4 V = glm::mat4(1.0f);
+    glm::mat4 P = glm::mat4(1.0f);
+
+    T = glm::translate(T, glm::vec3(-0.6f, 0.0f, 0.0f));
+
+    unsigned int Line_Location = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(Line_Location, 1, GL_FALSE, glm::value_ptr(T));
+
+    unsigned int vLine_Location = glGetUniformLocation(s_program[0], "View");
+    V = glm::lookAt(cameraPos, cameraDir, cameraUp);
+    glUniformMatrix4fv(vLine_Location, 1, GL_FALSE, glm::value_ptr(V));
+
+    unsigned int pLine_Location = glGetUniformLocation(s_program[0], "Projection");
+    P = glm::perspective(glm::radians(60.0f), (float)WIDTH / HEIGHT, 0.1f, 200.0f);
+    // P = glm::translate(P, glm::vec3(0.0f, 0.0f, -1.0f));
+    glUniformMatrix4fv(pLine_Location, 1, GL_FALSE, glm::value_ptr(P));
+
+    glm::mat4 TestT = glm::mat4(1.0f);
+    unsigned int Test = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(Test, 1, GL_FALSE, glm::value_ptr(TestT));
+
+    flaglocation = glGetUniformLocation(s_program[0], "flag");
+    glUniform1i(flaglocation, 1);
+
+    glBindVertexArray(VAO[3]);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture[0]);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+}
+
+void DrawGameClearImage() {
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 0.3f);
+    glm::vec3 cameraDir = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.5f);
+
+    glm::mat4 T = glm::mat4(1.0f);
+    glm::mat4 V = glm::mat4(1.0f);
+    glm::mat4 P = glm::mat4(1.0f);
+
+    T = glm::translate(T, glm::vec3(-0.6f, 0.0f, 0.0f));
+
+    unsigned int Line_Location = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(Line_Location, 1, GL_FALSE, glm::value_ptr(T));
+
+    unsigned int vLine_Location = glGetUniformLocation(s_program[0], "View");
+    V = glm::lookAt(cameraPos, cameraDir, cameraUp);
+    glUniformMatrix4fv(vLine_Location, 1, GL_FALSE, glm::value_ptr(V));
+
+    unsigned int pLine_Location = glGetUniformLocation(s_program[0], "Projection");
+    P = glm::perspective(glm::radians(60.0f), (float)WIDTH / HEIGHT, 0.1f, 200.0f);
+    // P = glm::translate(P, glm::vec3(0.0f, 0.0f, -1.0f));
+    glUniformMatrix4fv(pLine_Location, 1, GL_FALSE, glm::value_ptr(P));
+
+    glm::mat4 TestT = glm::mat4(1.0f);
+    unsigned int Test = glGetUniformLocation(s_program[0], "Transform");
+    glUniformMatrix4fv(Test, 1, GL_FALSE, glm::value_ptr(TestT));
+
+    flaglocation = glGetUniformLocation(s_program[0], "flag");
+    glUniform1i(flaglocation, 1);
+
+    glBindVertexArray(VAO[3]);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture[1]);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 void drawScene()
@@ -647,25 +712,49 @@ void drawScene()
         yPos *= 20;
     }
 
-    if (isPlayGame)
+    //if (isPlayGame)
+    //    CameraSetting(s_program[0], player.pos, dir, yPos);
+    //else
+    //    CameraSetting(s_program[0], Vector3(1000, 1000, 1000), dir, yPos);
+
+    if (isRestart) {
+        if (isOver) {
+            DrawGameOverImage();
+        }
+        else {
+            DrawGameClearImage();
+        }
+    }
+    else {
+        glUniform1i(flaglocation, 0);
+
+        if (deltaAngle)
+            computeDir(deltaAngle);
+
+        if (deltaMove)
+            computePos(deltaMove);
+
+        if (!isFPS)
+            dir = Vector3(player.pos.x + lx * 100, player.pos.y + ly, player.pos.z + lz * 100);
+        else {
+            dir = Vector3(player.pos.x + lx, player.pos.y + ly, player.pos.z + lz);
+            yPos *= 20;
+        }
         CameraSetting(s_program[0], player.pos, dir, yPos);
-    else
-        CameraSetting(s_program[0], Vector3(1000, 1000, 1000), dir, yPos);
 
-    DrawPlain();
-    DrawBoard();
-    DrawPlayer(player);
+        DrawPlain();
+        DrawBoard();
+        DrawPlayer(player);
 
+        // 폭탄
+        if (bomb_mode) {
+            throw_bomb();
+        }
 
-    // 폭탄
-    if (bomb_mode) {
-        throw_bomb();
+        for (int i = 0; i < MONSTER_SIZE; i++) {
+            DrawMonster(monster[i]);
+        }
     }
-
-    for (int i = 0; i < MONSTER_SIZE; i++) {
-        DrawMonster(monster[i]);
-    }
-
     glutPostRedisplay();
     glutSwapBuffers();
 }
@@ -686,14 +775,16 @@ void RestartGame() {
     isClear = false;
     isPlayGame = true;
     isFPS = false;
+    isRestart = false;
+    isOver = false;
     key_sum = 0;
     Loadfile(0);
     InitShape();
     addtionalTime = 0;
     InGameTime = 0;
-    player.pos = Vector3(0,0,0);
+    player.pos = Vector3(0, 0, 0);
 }
- 
+
 void Keyboard(unsigned char key, int x, int y) {
     if (!isPlayGame) {
         if (key == ' ') {
@@ -703,7 +794,7 @@ void Keyboard(unsigned char key, int x, int y) {
     }
     switch (key) {
     case '1':
-        if(isViewItem)
+        if (isViewItem)
             isFPS = false;
         break;
     case '3':
@@ -717,6 +808,14 @@ void Keyboard(unsigned char key, int x, int y) {
             bombShape.dir = Vector3(lx, 0, lz);
             bomb_mode = true;
         }
+        break;
+    case 'o':
+        isRestart = true;
+        isOver = true;
+        break;
+    case 'c':
+        isRestart = true;
+        isOver = false;
         break;
     }
 }
@@ -756,21 +855,23 @@ void TimerFunction(int value) {
     if (isPlayGame) {
         if (currentTime() < 0) {
             // GameOver;
+            isRestart = true;
+            isOver = true;
             InitGame(2);
             isPlayGame = false;
             isFPS = 3;
         }
 
         if (isFPS == true) {
-           elapsedFPSTime -= 0.1;
-           if (0 > elapsedFPSTime) {
-               viewItemCount++;
-               isFPS = false;
-               elapsedFPSTime = VIEW_TIME;
-               if (viewItemCount >= 1) {
-                   isViewItem = true;
-               }
-           }
+            elapsedFPSTime -= 0.1;
+            if (0 > elapsedFPSTime) {
+                viewItemCount++;
+                isFPS = false;
+                elapsedFPSTime = VIEW_TIME;
+                if (viewItemCount >= 1) {
+                    isViewItem = true;
+                }
+            }
         }
 
         if (bomb_mode) {
@@ -855,6 +956,8 @@ void TimerFunction(int value) {
                         boardShape[i][j].type = NONE;
                         key_sum++;
                         if (key_sum >= MAX_ITEM) {
+                            isRestart = true;
+                            isOver = false;
                             InitGame(1);
                             isPlayGame = false;
                             isClear = true;
@@ -889,7 +992,7 @@ void TimerFunction(int value) {
 }
 
 // 잔여 HP 표현하는 delta_time 얻는 함수
-float get_time() 
+float get_time()
 {
     float currentFrame = glutGet(GLUT_ELAPSED_TIME);
     delta_time = currentFrame - lastFrame;
@@ -941,7 +1044,6 @@ int Loadfile(int mapCollect)
         break;
     }
 
-
     if (fp == NULL)
     {
         printf("\n board gen fail\n");
@@ -962,9 +1064,8 @@ int Loadfile(int mapCollect)
 
                 boardShape[i][j].pos = Vector3((i * 7.5f - 35), 0, (j * 7.5f - 35));
 
-
                 switch (boardShape[i][j].type) {
-                case BOARD_TYPE::ITEM : 
+                case BOARD_TYPE::ITEM:
                     boardShape[i][j].color = Vector3(Yellow.r, Yellow.g, Yellow.b);
                     boardShape[i][j].scale = Vector3(1.0, 1.0, 1.0);
                     boardShape[i][j].radius = 3.5f;
@@ -1116,6 +1217,16 @@ void InitBuffer()
     glBufferData(GL_ARRAY_BUFFER, pyramid_normals.size() * sizeof(glm::vec3), &pyramid_normals[0], GL_STATIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
+
+    glBindVertexArray(VAO[3]);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO[6]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Background), Background, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0); //--- 위치 속성
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float))); //--- 노말값 속성
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float))); //--- 텍스처 좌표 속성
+    glEnableVertexAttribArray(2);
 }
 
 void InitShader() {
@@ -1187,9 +1298,9 @@ bool CollisionCheck(Shape shape, Shape shape2) { // shpae2 : player
     Vector4 bbox2 = shape2.GetBB();
     bool xcollision = false;
     bool zcollision = false;
-    
+
     if ((bbox.minx < bbox2.minx && bbox.maxx > bbox2.minx) ||
-    ((bbox.minx < bbox2.maxx && bbox.maxx > bbox2.maxx))) {
+        ((bbox.minx < bbox2.maxx && bbox.maxx > bbox2.maxx))) {
         xcollision = true;
     }
 
@@ -1203,4 +1314,49 @@ bool CollisionCheck(Shape shape, Shape shape2) { // shpae2 : player
     }
     else
         return false;
+}
+
+void InitText() {
+    int width[10], height[10], nrChannels[10];
+    stbi_set_flip_vertically_on_load(true);
+
+    glGenTextures(1, &texture[0]);
+    glBindTexture(GL_TEXTURE_2D, texture[0]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    unsigned char* data1 = stbi_load("GameOver.png", &width[0], &height[0], &nrChannels[0], 0);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width[0], height[0], 0, GL_RGB, GL_UNSIGNED_BYTE, data1);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(data1);
+
+
+    glGenTextures(1, &texture[1]);
+    glBindTexture(GL_TEXTURE_2D, texture[1]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    unsigned char* data2 = stbi_load("gclear.png", &width[1], &height[1], &nrChannels[1], 0);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width[1], height[1], 0, GL_RGB, GL_UNSIGNED_BYTE, data2);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(data2);
+
+    glGenTextures(1, &texture[2]);
+    glBindTexture(GL_TEXTURE_2D, texture[2]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    unsigned char* data3 = stbi_load("bg.png", &width[2], &height[2], &nrChannels[2], 0);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width[2], height[2], 0, GL_RGB, GL_UNSIGNED_BYTE, data3);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(data3);
 }
