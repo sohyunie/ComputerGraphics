@@ -39,8 +39,8 @@ normal_distribution <float>uid_mDir{ -1.0 , 1.0 };  // 적의 방향
 normal_distribution <float>uid_mPos{ -60.0, 60.0 }; // 적의 초기위치
 default_random_engine dre((size_t)time(NULL));
 
-const float BOMB_TIME = 3.0;
-const float VIEW_TIME = 10.0f;
+const float BOMB_TIME = 500.0;
+const float VIEW_TIME = 3000.0f;
 
 struct Vector3 {
     float x;
@@ -811,6 +811,7 @@ void Keyboard(unsigned char key, int x, int y) {
     }
 }
 
+
 void SpecialKeyboard(int key, int xx, int yy)
 {
     if (!isPlayGame) {
@@ -819,19 +820,19 @@ void SpecialKeyboard(int key, int xx, int yy)
 
     if (key == GLUT_KEY_LEFT)
     {
-        deltaAngle = -0.025f;
+        deltaAngle = -0.001f * delta_time;
     }
     if (key == GLUT_KEY_RIGHT)
     {
-        deltaAngle = 0.025f;
+        deltaAngle = 0.001f * delta_time;
     }
     if (key == GLUT_KEY_UP)
     {
-        deltaMove = 15.0;
+        deltaMove = 0.6 * delta_time;
     }
     if (key == GLUT_KEY_DOWN)
     {
-        deltaMove = -15.0;
+        deltaMove = -0.6 * delta_time;
     }
     glutPostRedisplay();
 }
@@ -854,7 +855,7 @@ void TimerFunction(int value) {
         }
 
         if (isFPS == true) {
-            elapsedFPSTime -= 0.1;
+            elapsedFPSTime -= delta_time;
             if (0 > elapsedFPSTime) {
                 viewItemCount++;
                 isFPS = false;
@@ -867,7 +868,7 @@ void TimerFunction(int value) {
 
         if (bomb_mode) {
             if (elapsedTime > 0) {
-                elapsedTime -= 0.1f;
+                elapsedTime -= delta_time;
                 bombShape.pos.x += bombShape.dir.x;
                 bombShape.pos.z += bombShape.dir.z;
                 // Monster Collision
@@ -902,8 +903,8 @@ void TimerFunction(int value) {
             if (monster[i].isAlive == false)
                 continue;
 
-            monster[i].pos.x += 0.01 * monster[i].dir.x * monster[i].speed;
-            monster[i].pos.z += 0.01 * monster[i].dir.z * monster[i].speed;
+            monster[i].pos.x += 0.0008 * monster[i].dir.x * monster[i].speed * delta_time;
+            monster[i].pos.z += 0.0008* monster[i].dir.z * monster[i].speed * delta_time;
             if (CollisionCheck(monster[i], player)) {
                 monster[i].pos.x += lx * 10;
                 monster[i].pos.z += lz * 10;
