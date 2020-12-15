@@ -590,7 +590,7 @@ void DrawMonster(Shape monster) {
 }
 
 void InitShape() {
-    //PlaySound(TEXT(SOUND_FILE_NAME_BGM_1), NULL, SND_ASYNC | SND_SYNC);
+    PlaySound(TEXT(SOUND_FILE_NAME_BGM_1), NULL, SND_ASYNC | SND_SYNC);
 
     for (int i = 0; i < MONSTER_SIZE; i++) {
         monster[i].pos = Vector3(130 + uid_mPos(dre), 1.5f, 130 + uid_mPos(dre));
@@ -1332,7 +1332,6 @@ void InitText() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width[0], height[0], 0, GL_RGB, GL_UNSIGNED_BYTE, data1);
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(data1);
-
 
     glGenTextures(1, &texture[1]);
     glBindTexture(GL_TEXTURE_2D, texture[1]);
