@@ -23,13 +23,13 @@
 #define SHAPE_SIZE 0.5f // Enemy size
 
 #define SIZE 30 // ∏  ªÁ¿Ã¡Ó
-#define MONSTER_SIZE 100
+#define MONSTER_SIZE 20
 #define MAX_TIME 120
 using namespace std;
 
 normal_distribution <float>uid_mColor{ 0.0,1.0 };
-normal_distribution <float>uid_mDir{ -1.0 ,1.0 };
-normal_distribution <float>uid_mPos{ 0, 100 };
+normal_distribution <float>uid_mDir{ -3.0 ,3.0 };
+normal_distribution <float>uid_mPos{ 0, 30 };
 default_random_engine dre((size_t)time(NULL));
 
 const float BOMB_TIME = 3.0;
@@ -154,6 +154,7 @@ bool bomb_mode = false;     // ∆¯≈∫ ¥¯¡ˆ±‚
 // time
 float delta_time = 0.0f;
 float lastFrame = 0.0f;
+float penaltyTime = 0.0f;
 
 
 ////////////////////////////////////////////
@@ -356,10 +357,10 @@ void get_bb(Shape shape) {
         glLineWidth(7);
         glBegin(GL_LINE_LOOP);
         {
-            glVertex3f(-shape.radius, -2, shape.radius);
-            glVertex3f(-shape.radius, -2, -shape.radius);
-            glVertex3f(shape.radius, -2, -shape.radius);
-            glVertex3f(shape.radius, -2, shape.radius);
+            glVertex3f(-shape.radius, 2, shape.radius);
+            glVertex3f(-shape.radius, 2, -shape.radius);
+            glVertex3f(shape.radius, 2, -shape.radius);
+            glVertex3f(shape.radius, 2, shape.radius);
         }
         glEnd();
         glLineWidth(1);
@@ -495,7 +496,7 @@ void DrawMonster(Shape monster) {
     glm::vec3 monsterPos = glm::vec3(monster.pos.x, monster.pos.y, monster.pos.z);
     glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(4, 4, 4));
     glm::mat4 T = glm::translate(glm::mat4(1.0f), monsterPos);
-    monsterSTR = S * T;
+    monsterSTR = T * S;
     unsigned int Planet = glGetUniformLocation(s_program[0], "Transform");
     glUniformMatrix4fv(Planet, 1, GL_FALSE, glm::value_ptr(monsterSTR));
 
@@ -507,10 +508,10 @@ void DrawMonster(Shape monster) {
 
 void InitShape() {
     for (int i = 0; i < MONSTER_SIZE; i++) {
-        monster[i].pos = Vector3(uid_mPos(dre), 1.0f, uid_mPos(dre));
+        monster[i].pos = Vector3(uid_mPos(dre), 1.5f, uid_mPos(dre));
         monster[i].color = Vector3(uid_mColor(dre), uid_mColor(dre), uid_mColor(dre));
         monster[i].dir = Vector3(uid_mDir(dre), 0.0f, uid_mDir(dre));
-        monster[i].radius = 1.0f;
+        monster[i].radius = 4.0f;
     }
 
     player.radius = 0.3f;
@@ -518,7 +519,7 @@ void InitShape() {
 
 void drawScene()
 {
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     CalculateLight(lightPos.x, lightPos.y, lightPos.z, 0.0);
     PrintUI();
@@ -618,6 +619,7 @@ void SpecialKeyboard(int key, int xx, int yy)
 }
 
 float elapsedTime;
+Vector3 priorPos = Vector3();
 void TimerFunction(int value) {
     if (bomb_mode) {
         if (elapsedTime > 0) {
@@ -637,10 +639,15 @@ void TimerFunction(int value) {
             bomb_mode = false;
         }
     }
+    priorPos = player.pos;
     for (int i = 0; i < MONSTER_SIZE; ++i) {
+        get_bb(monster[i]);
         monster[i].pos.x += 0.01 * monster[i].dir.x;
         monster[i].pos.z += 0.01 * monster[i].dir.z;
         if (CollisionCheck(monster[i], player)) {
+            monster[i].pos.x = priorPos.x;
+            monster[i].pos.z = priorPos.z;
+            penaltyTime -= 10.f;
             cout << "Monster and Player collide" << endl;
         }
     }
@@ -655,8 +662,11 @@ void TimerFunction(int value) {
                 break;
             case BOARD_TYPE::WALL:
             case BOARD_TYPE::FIXED_WALL:
-                if (CollisionCheck(boardShape[i][j], player))
+                if (CollisionCheck(boardShape[i][j], player)) {
+                    player.pos.x += -lx * 1;
+                    player.pos.z += -lz * 1;
                     cout << "[Collision] WALL PLAYER_" << i << "_" << j << endl;
+                }
                 break;
             case BOARD_TYPE::ITEM:
                 if (CollisionCheck(boardShape[i][j], player)) {
@@ -685,7 +695,7 @@ float get_time()
 }
 
 float currentTime() {
-    return round(get_time() / 100) / 10;
+    return round(get_time() / 100) / 10 - penaltyTime;
 }
 
 // ∆¯≈∫
@@ -752,11 +762,11 @@ int Loadfile(int mapCollect)
                 if (boardShape[i][j].type == ITEM) {
                     boardShape[i][j].color = Vector3(Yellow.r, Yellow.g, Yellow.b);
                     boardShape[i][j].scale = Vector3(1.0, 1.0, 1.0);
-                    boardShape[i][j].radius = 3.0f;
+                    boardShape[i][j].radius = 3.5f;
                 }
                 else {
-                    boardShape[i][j].radius = 3.0f;
-                    boardShape[i][j].scale = Vector3(2.5, 2.5, 2.5);
+                    boardShape[i][j].radius = 3.5f;
+                    boardShape[i][j].scale = Vector3(3.0, 3.0, 3.0);
 
                     if (boardShape[i][j].type == FIXED_WALL) {
                         boardShape[i][j].color = Vector3(0.7, 0.7, 0.7);
