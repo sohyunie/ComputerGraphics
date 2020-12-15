@@ -24,6 +24,7 @@
 
 #define SIZE 30 // 맵 사이즈
 #define MONSTER_SIZE 100
+#define MAX_TIME 120
 using namespace std;
 
 normal_distribution <float>uid_mColor{ 0.0,1.0 };
@@ -133,7 +134,6 @@ GLuint VAOCube[7], VBOCube[7];
 // 맵 파일 입출력
 
 int mapNumber;
-float colorbuffer[4][3] = { 0 };
 Shape boardShape[SIZE][SIZE];
 Shape monster[MONSTER_SIZE];
 
@@ -346,7 +346,7 @@ void DrawPlayer(Shape player)
 
     glBindVertexArray(VAO[1]);
     glDrawArrays(GL_TRIANGLES, 0, robot_vertices.size());
-    cout << player.pos.x << ", " << player.pos.z << endl;
+    //cout << player.pos.x << ", " << player.pos.z << endl;
 }
 
 void get_bb(Shape shape) {
@@ -413,9 +413,9 @@ void renderBitmapString(float x, float y, float z, void* font, char* string)
 void PrintUI()
 {
     //glClearColor(0.0, 0.0, 0.0, 0.0);
-    string text = "TIME : " + to_string(currentTime()).substr(0, 4);
+    string text = "TIME : " + to_string(MAX_TIME - currentTime()).substr(0, 4);
     const char* string = text.data();
-    glColor3f(0.0f, 0.0f, 0.0f);
+    glColor3f(0.5f, 0.5f, 0.5f);
     glRasterPos2f(-0.9, 0.9);  // 문자 출력할 위치 설정
     
     int len = (int)strlen(string);
@@ -438,8 +438,6 @@ void DrawKey(Shape shape) {
 
     glBindVertexArray(VAO[2]);
     glDrawArrays(GL_TRIANGLES, 0, pyramid_vertices.size());
-
-    //CalculateLight(shape.pos.x, shape.pos.y, shape.pos.z, 1.0);
 }
 
 void DrawPlain() {
@@ -504,8 +502,6 @@ void DrawMonster(Shape monster) {
     unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
     glUniform3f(Color_Bomb, monster.color.x, monster.color.y, monster.color.z);
 
-    //CalculateLight(monsterPos.x, monsterPos.y, monsterPos.z, 1.0);
-
     gluSphere(qobj, 1.0, 20, 20);
 }
 
@@ -522,8 +518,9 @@ void InitShape() {
 
 void drawScene()
 {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    CalculateLight(lightPos.x, lightPos.y, lightPos.z, 0.0);
     PrintUI();
     
     glUseProgram(s_program[0]);
@@ -703,8 +700,6 @@ void throw_bomb() {
 
     unsigned int Color_Bomb = glGetUniformLocation(s_program[1], "in_Color");
     glUniform3f(Color_Bomb, Red.r, Red.g, Red.b);
-
-    //CalculateLight(bomb_pos.x, bomb_pos.y, bomb_pos.z, 1.0);
 
     gluSphere(qobj, 0.5, 20, 20);
 }
@@ -917,16 +912,16 @@ void InitShader() {
 
 // 조명 계산
 void CalculateLight(float lgt_x, float lgt_y, float lgt_z, float amb) {
-    unsigned int light_pos = glGetUniformLocation(s_program[0], "lightPos");
+    unsigned int light_pos = glGetUniformLocation(s_program[0], "g_lightPos");
     glUniform3f(light_pos, lgt_x, lgt_y, lgt_z);
 
-    unsigned int light_color = glGetUniformLocation(s_program[0], "lightColor");
+    unsigned int light_color = glGetUniformLocation(s_program[0], "g_lightColor");
     glUniform3f(light_color, lightColor.x, lightColor.y, lightColor.z);
 
-    unsigned int view_pos = glGetUniformLocation(s_program[0], "viewPos");
+    unsigned int view_pos = glGetUniformLocation(s_program[0], "g_cameraPos");
     glUniform3f(view_pos, player.pos.x, player.pos.y, player.pos.z);
 
-    unsigned int ambientLight_on = glGetUniformLocation(s_program[0], "ambientLight_on_off");
+    unsigned int ambientLight_on = glGetUniformLocation(s_program[0], "g_lightAmbient");
     glUniform3f(ambientLight_on, amb, amb, amb);
 }
 
